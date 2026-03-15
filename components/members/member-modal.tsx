@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import {
   Dialog,
@@ -16,7 +14,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Upload } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -29,21 +26,32 @@ interface MemberModalProps {
 
 export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
   const [formData, setFormData] = useState({
+    // Required fields
     firstName: "",
     lastName: "",
-    email: "",
+    gender: "",
+    dobMonth: "",
+    dobDay: "",
     phone: "",
     address: "",
-    dateOfBirth: "",
-    joinDate: "",
-    status: "active",
-    family: "",
-    ministry: "",
-    notes: "",
-    profileImage: "",
-    isBaptized: false,
+    
+    // Optional fields
+    dobYear: "",
+    email: "",
+    contactPerson: "",
+    city: "",
+    country: "",
+    familyId: "",
+    occupation: "",
+    maritalStatus: "single",
+    membershipStatus: "visitor",
+    isBaptised: false,
     baptismDate: "",
     baptismLocation: "",
+    baptismChurch: "",
+    ministry: "",
+    profilePhoto: "",
+    notes: "",
   })
 
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -53,42 +61,58 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
       setFormData({
         firstName: member.firstName || "",
         lastName: member.lastName || "",
-        email: member.email || "",
+        gender: member.gender || "",
+        dobMonth: member.dobMonth || "",
+        dobDay: member.dobDay || "",
         phone: member.phone || "",
         address: member.address || "",
-        dateOfBirth: member.dateOfBirth || "",
-        joinDate: member.joinDate || "",
-        status: member.status || "active",
-        family: member.family || "",
-        ministry: member.ministry || "",
-        notes: member.notes || "",
-        profileImage: member.avatar || "",
-        isBaptized: member.isBaptized || false,
+        dobYear: member.dobYear || "",
+        email: member.email || "",
+        contactPerson: member.contactPerson || "",
+        city: member.city || "",
+        country: member.country || "",
+        familyId: member.familyId || "",
+        occupation: member.occupation || "",
+        maritalStatus: member.maritalStatus || "single",
+        membershipStatus: member.membershipStatus || "visitor",
+        isBaptised: member.isBaptised || false,
         baptismDate: member.baptismDate || "",
         baptismLocation: member.baptismLocation || "",
+        baptismChurch: member.baptismChurch || "",
+        ministry: member.ministry || "",
+        profilePhoto: member.profilePhoto || "",
+        notes: member.notes || "",
       })
-      setImagePreview(member.avatar || null)
+      setImagePreview(member.profilePhoto || null)
     } else {
       setFormData({
         firstName: "",
         lastName: "",
-        email: "",
+        gender: "",
+        dobMonth: "",
+        dobDay: "",
         phone: "",
         address: "",
-        dateOfBirth: "",
-        joinDate: "",
-        status: "active",
-        family: "",
-        ministry: "",
-        notes: "",
-        profileImage: "",
-        isBaptized: false,
+        dobYear: "",
+        email: "",
+        contactPerson: "",
+        city: "",
+        country: "",
+        familyId: "",
+        occupation: "",
+        maritalStatus: "single",
+        membershipStatus: "visitor",
+        isBaptised: false,
         baptismDate: "",
         baptismLocation: "",
+        baptismChurch: "",
+        ministry: "",
+        profilePhoto: "",
+        notes: "",
       })
       setImagePreview(null)
     }
-  }, [member])
+  }, [member, isOpen])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -103,7 +127,7 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
       const reader = new FileReader()
       reader.onloadend = () => {
         setImagePreview(reader.result as string)
-        setFormData({ ...formData, profileImage: reader.result as string })
+        setFormData({ ...formData, profilePhoto: reader.result as string })
       }
       reader.readAsDataURL(file)
     }
@@ -111,7 +135,7 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{member ? "Edit Member" : "Add New Member"}</DialogTitle>
           <DialogDescription>
@@ -120,7 +144,7 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-6">
             <div className="relative">
               <Avatar className="h-24 w-24">
                 <AvatarImage src={imagePreview || "/placeholder.svg?height=96&width=96"} alt="Profile" />
@@ -139,19 +163,18 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
             </div>
           </div>
 
-          <Tabs defaultValue="personal" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="personal">Personal Info</TabsTrigger>
-              <TabsTrigger value="contact">Contact & Family</TabsTrigger>
-              <TabsTrigger value="church">Church Info</TabsTrigger>
-              <TabsTrigger value="baptism">Baptism</TabsTrigger>
-            </TabsList>
-
-            <div className="min-h-[320px] mt-4">
-              <TabsContent value="personal" className="space-y-4">
+          <div className="space-y-6">
+            {/* Required Fields Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-foreground">
+                Personal Information <span className="text-destructive">*</span>
+              </h3>
+              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
+                    <Label htmlFor="firstName">
+                      First Name <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="firstName"
                       value={formData.firstName}
@@ -160,7 +183,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor="lastName">
+                      Last Name <span className="text-destructive">*</span>
+                    </Label>
                     <Input
                       id="lastName"
                       value={formData.lastName}
@@ -169,83 +194,209 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="gender">
+                      Gender <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
+                      value={formData.gender}
+                      onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="maritalStatus">Marital Status</Label>
+                    <Select
+                      value={formData.maritalStatus}
+                      onValueChange={(value) => setFormData({ ...formData, maritalStatus: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single">Single</SelectItem>
+                        <SelectItem value="married">Married</SelectItem>
+                        <SelectItem value="divorced">Divorced</SelectItem>
+                        <SelectItem value="widowed">Widowed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dobMonth">
+                      Birth Month <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="dobMonth"
+                      type="number"
+                      min="1"
+                      max="12"
+                      placeholder="MM"
+                      value={formData.dobMonth}
+                      onChange={(e) => setFormData({ ...formData, dobMonth: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dobDay">
+                      Birth Day <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="dobDay"
+                      type="number"
+                      min="1"
+                      max="31"
+                      placeholder="DD"
+                      value={formData.dobDay}
+                      onChange={(e) => setFormData({ ...formData, dobDay: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dobYear">Birth Year (Optional)</Label>
+                    <Input
+                      id="dobYear"
+                      type="number"
+                      min="1900"
+                      max={new Date().getFullYear()}
+                      placeholder="YYYY"
+                      value={formData.dobYear}
+                      onChange={(e) => setFormData({ ...formData, dobYear: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact & Family Section */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4 text-foreground">
+                Contact & Family <span className="text-destructive">*</span>
+              </h3>
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                  <Label htmlFor="phone">
+                    Phone <span className="text-destructive">*</span>
+                  </Label>
                   <Input
-                    id="dateOfBirth"
-                    type="date"
-                    value={formData.dateOfBirth}
-                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    required
                   />
                 </div>
-              </TabsContent>
 
-              <TabsContent value="contact" className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email (Optional)</Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
+                  <Label htmlFor="address">
+                    Address <span className="text-destructive">*</span>
+                  </Label>
                   <Textarea
                     id="address"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Street address"
+                    required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="family">Family</Label>
-                  <Input
-                    id="family"
-                    value={formData.family}
-                    onChange={(e) => setFormData({ ...formData, family: e.target.value })}
-                    placeholder="Family name or ID"
-                  />
-                </div>
-              </TabsContent>
 
-              <TabsContent value="church" className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City (Optional)</Label>
+                    <Input
+                      id="city"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Country (Optional)</Label>
+                    <Input
+                      id="country"
+                      value={formData.country}
+                      onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="joinDate">Join Date</Label>
+                  <Label htmlFor="contactPerson">Emergency Contact Person (Optional)</Label>
                   <Input
-                    id="joinDate"
-                    type="date"
-                    value={formData.joinDate}
-                    onChange={(e) => setFormData({ ...formData, joinDate: e.target.value })}
+                    id="contactPerson"
+                    value={formData.contactPerson}
+                    onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                    placeholder="Name of emergency contact"
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
+                  <Label htmlFor="familyId">Family ID (Optional)</Label>
+                  <Input
+                    id="familyId"
+                    value={formData.familyId}
+                    onChange={(e) => setFormData({ ...formData, familyId: e.target.value })}
+                    placeholder="Link to family records"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Church Information - Optional */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4 text-foreground">
+                Church Information <span className="text-muted-foreground text-sm">(Optional)</span>
+              </h3>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="membershipStatus">Membership Status</Label>
                   <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                    value={formData.membershipStatus}
+                    onValueChange={(value) => setFormData({ ...formData, membershipStatus: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="visitor">Visitor</SelectItem>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="visitor">Visitor</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="ministry">Ministry</Label>
+                  <Label htmlFor="occupation">Occupation (Optional)</Label>
+                  <Input
+                    id="occupation"
+                    value={formData.occupation}
+                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                    placeholder="Member's occupation"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="ministry">Ministry (Optional)</Label>
                   <Input
                     id="ministry"
                     value={formData.ministry}
@@ -253,28 +404,36 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     placeholder="Ministry or group involvement"
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
+                  <Label htmlFor="notes">Notes (Optional)</Label>
                   <Textarea
                     id="notes"
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     placeholder="Additional notes about the member"
+                    rows={3}
                   />
                 </div>
-              </TabsContent>
+              </div>
+            </div>
 
-              <TabsContent value="baptism" className="space-y-4">
-                <div className="flex items-center space-x-2 mb-4">
+            {/* Baptism Information - Optional */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4 text-foreground">
+                Baptism Information <span className="text-muted-foreground text-sm">(Optional)</span>
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="isBaptized"
-                    checked={formData.isBaptized}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isBaptized: checked as boolean })}
+                    id="isBaptised"
+                    checked={formData.isBaptised}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isBaptised: checked as boolean })}
                   />
-                  <Label htmlFor="isBaptized">Member is baptized</Label>
+                  <Label htmlFor="isBaptised">Member is baptized</Label>
                 </div>
 
-                {formData.isBaptized && (
+                {formData.isBaptised && (
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="baptismDate">Baptism Date</Label>
@@ -294,11 +453,20 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                         placeholder="Church or location where baptized"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="baptismChurch">Baptizing Church (Optional)</Label>
+                      <Input
+                        id="baptismChurch"
+                        value={formData.baptismChurch}
+                        onChange={(e) => setFormData({ ...formData, baptismChurch: e.target.value })}
+                        placeholder="Church where baptism occurred"
+                      />
+                    </div>
                   </>
                 )}
-              </TabsContent>
+              </div>
             </div>
-          </Tabs>
+          </div>
 
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={onClose}>
