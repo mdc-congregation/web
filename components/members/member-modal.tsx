@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,20 +8,26 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Upload } from "lucide-react"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Upload } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface MemberModalProps {
-  isOpen: boolean
-  onClose: () => void
-  member?: any
+  isOpen: boolean;
+  onClose: () => void;
+  member?: any;
 }
 
 export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
@@ -34,7 +40,7 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
     dobDay: "",
     phone: "",
     address: "",
-    
+
     // Optional fields
     dobYear: "",
     email: "",
@@ -52,9 +58,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
     ministry: "",
     profilePhoto: "",
     notes: "",
-  })
+  });
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (member) {
@@ -82,8 +88,8 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
         ministry: member.ministry || "",
         profilePhoto: member.profilePhoto || "",
         notes: member.notes || "",
-      })
-      setImagePreview(member.profilePhoto || null)
+      });
+      setImagePreview(member.profilePhoto || null);
     } else {
       setFormData({
         firstName: "",
@@ -109,29 +115,29 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
         ministry: "",
         profilePhoto: "",
         notes: "",
-      })
-      setImagePreview(null)
+      });
+      setImagePreview(null);
     }
-  }, [member, isOpen])
+  }, [member, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     // Handle form submission
-    console.log("Form submitted:", formData)
-    onClose()
-  }
+    console.log("Form submitted:", formData);
+    onClose();
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string)
-        setFormData({ ...formData, profilePhoto: reader.result as string })
-      }
-      reader.readAsDataURL(file)
+        setImagePreview(reader.result as string);
+        setFormData({ ...formData, profilePhoto: reader.result as string });
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -139,7 +145,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
         <DialogHeader>
           <DialogTitle>{member ? "Edit Member" : "Add New Member"}</DialogTitle>
           <DialogDescription>
-            {member ? "Update member information" : "Add a new member to the church directory"}
+            {member
+              ? "Update member information"
+              : "Add a new member to the church directory"}
           </DialogDescription>
         </DialogHeader>
 
@@ -147,9 +155,14 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
           <div className="flex justify-center mb-6">
             <div className="relative">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={imagePreview || "/placeholder.svg?height=96&width=96"} alt="Profile" />
+                <AvatarImage
+                  src={imagePreview || "/placeholder.svg?height=96&width=96"}
+                  alt="Profile"
+                />
                 <AvatarFallback>
-                  {formData.firstName && formData.lastName ? formData.firstName[0] + formData.lastName[0] : "?"}
+                  {formData.firstName && formData.lastName
+                    ? formData.firstName[0] + formData.lastName[0]
+                    : "?"}
                 </AvatarFallback>
               </Avatar>
               <div className="absolute bottom-0 right-0">
@@ -158,7 +171,13 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     <Upload className="h-4 w-4" />
                   </div>
                 </Label>
-                <Input id="picture" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                <Input
+                  id="picture"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
               </div>
             </div>
           </div>
@@ -178,7 +197,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     <Input
                       id="firstName"
                       value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, firstName: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -189,7 +210,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     <Input
                       id="lastName"
                       value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, lastName: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -202,7 +225,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     </Label>
                     <Select
                       value={formData.gender}
-                      onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, gender: value })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select gender" />
@@ -217,7 +242,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     <Label htmlFor="maritalStatus">Marital Status</Label>
                     <Select
                       value={formData.maritalStatus}
-                      onValueChange={(value) => setFormData({ ...formData, maritalStatus: value })}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, maritalStatus: value })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -237,16 +264,30 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     <Label htmlFor="dobMonth">
                       Birth Month <span className="text-destructive">*</span>
                     </Label>
-                    <Input
-                      id="dobMonth"
-                      type="number"
-                      min="1"
-                      max="12"
-                      placeholder="MM"
+                    <Select
                       value={formData.dobMonth}
-                      onChange={(e) => setFormData({ ...formData, dobMonth: e.target.value })}
-                      required
-                    />
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, dobMonth: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="January">January</SelectItem>
+                        <SelectItem value="February">February</SelectItem>
+                        <SelectItem value="March">March</SelectItem>
+                        <SelectItem value="April">April</SelectItem>
+                        <SelectItem value="May">May</SelectItem>
+                        <SelectItem value="June">June</SelectItem>
+                        <SelectItem value="July">July</SelectItem>
+                        <SelectItem value="August">August</SelectItem>
+                        <SelectItem value="September">September</SelectItem>
+                        <SelectItem value="October">October</SelectItem>
+                        <SelectItem value="November">November</SelectItem>
+                        <SelectItem value="December">December</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="dobDay">
@@ -259,7 +300,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                       max="31"
                       placeholder="DD"
                       value={formData.dobDay}
-                      onChange={(e) => setFormData({ ...formData, dobDay: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, dobDay: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -272,7 +315,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                       max={new Date().getFullYear()}
                       placeholder="YYYY"
                       value={formData.dobYear}
-                      onChange={(e) => setFormData({ ...formData, dobYear: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, dobYear: e.target.value })
+                      }
                     />
                   </div>
                 </div>
@@ -293,7 +338,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     id="phone"
                     type="tel"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -304,7 +351,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                   />
                 </div>
 
@@ -315,7 +364,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                   <Textarea
                     id="address"
                     value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
                     placeholder="Street address"
                     required
                   />
@@ -327,7 +378,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     <Input
                       id="city"
                       value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, city: e.target.value })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
@@ -335,17 +388,26 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     <Input
                       id="country"
                       value={formData.country}
-                      onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, country: e.target.value })
+                      }
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="contactPerson">Emergency Contact Person (Optional)</Label>
+                  <Label htmlFor="contactPerson">
+                    Emergency Contact Person (Optional)
+                  </Label>
                   <Input
                     id="contactPerson"
                     value={formData.contactPerson}
-                    onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        contactPerson: e.target.value,
+                      })
+                    }
                     placeholder="Name of emergency contact"
                   />
                 </div>
@@ -355,7 +417,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                   <Input
                     id="familyId"
                     value={formData.familyId}
-                    onChange={(e) => setFormData({ ...formData, familyId: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, familyId: e.target.value })
+                    }
                     placeholder="Link to family records"
                   />
                 </div>
@@ -365,14 +429,19 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
             {/* Church Information - Optional */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold mb-4 text-foreground">
-                Church Information <span className="text-muted-foreground text-sm">(Optional)</span>
+                Church Information{" "}
+                <span className="text-muted-foreground text-sm">
+                  (Optional)
+                </span>
               </h3>
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="membershipStatus">Membership Status</Label>
                   <Select
                     value={formData.membershipStatus}
-                    onValueChange={(value) => setFormData({ ...formData, membershipStatus: value })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, membershipStatus: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -390,7 +459,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                   <Input
                     id="occupation"
                     value={formData.occupation}
-                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, occupation: e.target.value })
+                    }
                     placeholder="Member's occupation"
                   />
                 </div>
@@ -400,7 +471,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                   <Input
                     id="ministry"
                     value={formData.ministry}
-                    onChange={(e) => setFormData({ ...formData, ministry: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, ministry: e.target.value })
+                    }
                     placeholder="Ministry or group involvement"
                   />
                 </div>
@@ -410,7 +483,9 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                   <Textarea
                     id="notes"
                     value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
                     placeholder="Additional notes about the member"
                     rows={3}
                   />
@@ -421,14 +496,22 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
             {/* Baptism Information - Optional */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold mb-4 text-foreground">
-                Baptism Information <span className="text-muted-foreground text-sm">(Optional)</span>
+                Baptism Information{" "}
+                <span className="text-muted-foreground text-sm">
+                  (Optional)
+                </span>
               </h3>
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="isBaptised"
                     checked={formData.isBaptised}
-                    onCheckedChange={(checked) => setFormData({ ...formData, isBaptised: checked as boolean })}
+                    onCheckedChange={(checked) =>
+                      setFormData({
+                        ...formData,
+                        isBaptised: checked as boolean,
+                      })
+                    }
                   />
                   <Label htmlFor="isBaptised">Member is baptized</Label>
                 </div>
@@ -441,7 +524,12 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                         id="baptismDate"
                         type="date"
                         value={formData.baptismDate}
-                        onChange={(e) => setFormData({ ...formData, baptismDate: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            baptismDate: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -449,16 +537,28 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                       <Input
                         id="baptismLocation"
                         value={formData.baptismLocation}
-                        onChange={(e) => setFormData({ ...formData, baptismLocation: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            baptismLocation: e.target.value,
+                          })
+                        }
                         placeholder="Church or location where baptized"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="baptismChurch">Baptizing Church (Optional)</Label>
+                      <Label htmlFor="baptismChurch">
+                        Baptizing Church (Optional)
+                      </Label>
                       <Input
                         id="baptismChurch"
                         value={formData.baptismChurch}
-                        onChange={(e) => setFormData({ ...formData, baptismChurch: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            baptismChurch: e.target.value,
+                          })
+                        }
                         placeholder="Church where baptism occurred"
                       />
                     </div>
@@ -472,10 +572,12 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">{member ? "Update Member" : "Add Member"}</Button>
+            <Button type="submit">
+              {member ? "Update Member" : "Add Member"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

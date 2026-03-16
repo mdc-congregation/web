@@ -1,3 +1,5 @@
+import { getAuthToken } from "./auth"
+
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH"
 
 interface RequestConfig {
@@ -11,15 +13,20 @@ class ApiClient {
   private baseURL: string
   private defaultHeaders: Record<string, string>
 
-  constructor(baseURL = "/api") {
+  constructor(baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api") {
     this.baseURL = baseURL
     this.defaultHeaders = {
       "Content-Type": "application/json",
+      "Accept": "application/json",
     }
   }
 
-  private buildURL(endpoint: string, params?: Record<string, string>): string {
-    const url = new URL(endpoint, window.location.origin + this.baseURL)
+  private async request<T>(endpoint: string, config: RequestConfig = {}): Promise<T> {
+    const { method = "GET", headers = {}, body, params } = config
+
+    // Build full URL
+    const baseUrl = this.baseURL.startsWith("http") ? this.baseURL : `${window.location.origin}${this.baseURL}`
+    const url = new URL(endpoint, baseUrl)
 
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -27,17 +34,15 @@ class ApiClient {
       })
     }
 
-    return url.toString()
-  }
-
-  private async request<T>(endpoint: string, config: RequestConfig = {}): Promise<T> {
-    const { method = "GET", headers = {}, body, params } = config
-
-    const url = this.buildURL(endpoint, params)
-
     const requestHeaders = {
       ...this.defaultHeaders,
       ...headers,
+    }
+
+    // Add authorization token if available
+    const token = typeof window !== "undefined" ? getAuthToken() : null
+    if (token) {
+      requestHeaders["Authorization"] = `Bearer ${token}`
     }
 
     const requestConfig: RequestInit = {
@@ -50,7 +55,7 @@ class ApiClient {
     }
 
     try {
-      const response = await fetch(url, requestConfig)
+      const response = await fetch(url.toString(), requestConfig)
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -63,7 +68,7 @@ class ApiClient {
 
       return (await response.text()) as unknown as T
     } catch (error) {
-      console.error("API request failed:", error)
+      console.error("[v0] API request failed:", error)
       throw error
     }
   }
@@ -110,11 +115,12 @@ export const apiClient = new ApiClient()
 export const api = {
   // Members
   members: {
-    getAll: () => apiClient.get("/members"),
-    getById: (id: string) => apiClient.get(`/members/${id}`),
-    create: (data: any) => apiClient.post("/members", data),
-    update: (id: string, data: any) => apiClient.put(`/members/${id}`, data),
-    delete: (id: string) => apiClient.delete(`/members/${id}`),
+    getAll: () => apiClient.get("/member/list"),
+    getById: (id: string) => apiClient.get(`/member/${id}`),
+    create: (data: any) => apiClient.post("/member/save", data),
+    update: (id: string, data: any) => apiClient.put(`/member/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/member/${id}`),
+    getCount: () => apiClient.get("/member/count"),
   },
 
   // Services

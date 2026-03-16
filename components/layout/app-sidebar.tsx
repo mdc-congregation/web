@@ -1,12 +1,15 @@
 "use client"
 
-import { Users, Calendar, DollarSign, MessageSquare, UserCheck, Settings, Church, Home } from "lucide-react"
+import { Users, Calendar, DollarSign, MessageSquare, UserCheck, Settings, Church, Home, LogOut } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/hooks/use-auth"
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -45,6 +48,11 @@ const navigationItems = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const { logout, isLoading } = useAuth()
+
+  const handleLogout = async () => {
+    await logout()
+  }
 
   return (
     <Sidebar>
@@ -52,7 +60,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/">
+              <Link href="/dashboard">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <Church className="size-4" />
                 </div>
@@ -73,7 +81,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {section.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={pathname === item.url}>
+                    <SidebarMenuButton asChild isActive={pathname === item.url || pathname === item.url + "/page"}>
                       <Link href={item.url}>
                         <item.icon className="size-4" />
                         <span>{item.title}</span>
@@ -86,6 +94,22 @@ export function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <Button
+              onClick={handleLogout}
+              disabled={isLoading}
+              variant="outline"
+              size="sm"
+              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="size-4 mr-2" />
+              {isLoading ? "Logging out..." : "Logout"}
+            </Button>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )
