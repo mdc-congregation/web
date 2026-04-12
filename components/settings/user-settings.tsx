@@ -54,7 +54,13 @@ export function UserSettings() {
     event.preventDefault()
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match.")
+      const message = "Passwords do not match."
+      setError(message)
+      toast({
+        variant: "destructive",
+        title: "Registration failed",
+        description: message,
+      })
       return
     }
 
@@ -91,6 +97,11 @@ export function UserSettings() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Registration failed."
       setError(message)
+      toast({
+        variant: "destructive",
+        title: "Registration failed",
+        description: message,
+      })
     } finally {
       setIsSubmitting(false)
     }

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/hooks/use-toast'
 import {
   login as authLogin,
   logout as authLogout,
@@ -25,6 +26,7 @@ export interface UseAuthReturn {
 
 export function useAuth(): UseAuthReturn {
   const router = useRouter()
+  const { toast } = useToast()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -57,11 +59,16 @@ export function useAuth(): UseAuthReturn {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed. Please try again.'
       setError(errorMessage)
+      toast({
+        variant: 'destructive',
+        title: 'Login failed',
+        description: errorMessage,
+      })
       console.error('[v0] Login failed:', err)
     } finally {
       setIsLoading(false)
     }
-  }, [router])
+  }, [router, toast])
 
   const handleLogout = useCallback(async () => {
     setIsLoading(true)
@@ -75,11 +82,16 @@ export function useAuth(): UseAuthReturn {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Logout failed'
       setError(errorMessage)
+      toast({
+        variant: 'destructive',
+        title: 'Logout failed',
+        description: errorMessage,
+      })
       console.error('[v0] Logout failed:', err)
     } finally {
       setIsLoading(false)
     }
-  }, [router])
+  }, [router, toast])
 
   const clearError = useCallback(() => {
     setError(null)

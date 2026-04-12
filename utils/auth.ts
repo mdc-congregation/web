@@ -78,9 +78,35 @@ const getErrorMessage = (payload: unknown, fallback: string) => {
     return fallback
   }
 
+  const errors = 'errors' in payload ? payload.errors : null
+
+  if (errors && typeof errors === 'object') {
+    for (const value of Object.values(errors)) {
+      if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string') {
+        return value[0]
+      }
+
+      if (typeof value === 'string' && value.trim()) {
+        return value
+      }
+    }
+  }
+
   const message = 'message' in payload ? payload.message : null
 
   return typeof message === 'string' && message.trim() ? message : fallback
+}
+
+const normalizeRequestError = (error: unknown, fallback: string) => {
+  if (error instanceof Error) {
+    if (error.message === 'Failed to fetch') {
+      return 'Unable to reach the API. Check that the backend is running and accessible.'
+    }
+
+    return error.message
+  }
+
+  return fallback
 }
 
 // Store token in localStorage
@@ -153,7 +179,7 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
     return data
   } catch (error) {
     console.error('[v0] Login error:', error)
-    throw error
+    throw new Error(normalizeRequestError(error, 'Login failed'))
   }
 }
 
@@ -188,7 +214,7 @@ export const registerUser = async (
     return data
   } catch (error) {
     console.error('[v0] Registration error:', error)
-    throw error
+    throw new Error(normalizeRequestError(error, 'Registration failed'))
   }
 }
 
