@@ -104,7 +104,7 @@ export function useCommunication() {
         },
         {
           id: "4",
-          subject: "Welcome to Grace Church",
+          subject: "Welcome to Freedom Temple",
           type: "email",
           recipientType: "individual",
           recipientCount: 1,

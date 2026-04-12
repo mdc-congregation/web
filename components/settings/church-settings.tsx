@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card"
 
 export function ChurchSettings() {
   const [formData, setFormData] = useState({
-    churchName: "Grace Church",
+    churchName: "Freedom Temple",
     address: "123 Main Street, Anytown, USA",
     phone: "(555) 123-4567",
     email: "info@gracechurch.org",

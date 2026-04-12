@@ -65,7 +65,7 @@ export function AppSidebar() {
                   <Church className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">Grace Church</span>
+                  <span className="font-semibold">Freedom Temple</span>
                   <span className="text-xs">Management System</span>
                 </div>
               </Link>

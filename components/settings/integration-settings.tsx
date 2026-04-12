@@ -52,7 +52,7 @@ export function IntegrationSettings() {
     smtpPort: "587",
     username: "church@gracechurch.org",
     password: "",
-    fromName: "Grace Church",
+    fromName: "Freedom Temple",
   })
 
   const [isSMSCreditsModalOpen, setIsSMSCreditsModalOpen] = useState(false)
