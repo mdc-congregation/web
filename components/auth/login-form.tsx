@@ -37,7 +37,7 @@ export function LoginForm() {
       await login({
         email: formData.email,
         password: formData.password,
-        remmeberMe: formData.rememberMe,
+        rememberMe: formData.rememberMe,
       })
     } catch (err) {
       console.error('[v0] Login form error:', err)

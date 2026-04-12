@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getAuthToken } from '@/utils/auth'
+import { validateSession } from '@/utils/auth'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -14,14 +14,29 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    const token = getAuthToken()
+    let isMounted = true
 
-    if (!token) {
-      router.replace('/login')
-    } else {
-      setIsAuthorized(true)
+    const checkSession = async () => {
+      const user = await validateSession()
+
+      if (!isMounted) {
+        return
+      }
+
+      if (!user) {
+        router.replace('/login')
+      } else {
+        setIsAuthorized(true)
+      }
+
+      setIsChecking(false)
     }
-    setIsChecking(false)
+
+    void checkSession()
+
+    return () => {
+      isMounted = false
+    }
   }, [router])
 
   if (isChecking) {

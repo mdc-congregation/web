@@ -7,8 +7,6 @@ import {
   logout as authLogout,
   getAuthToken,
   getAuthUser,
-  setAuthToken,
-  setAuthUser,
   clearAuthToken,
   AuthUser,
   LoginCredentials,
@@ -52,8 +50,6 @@ export function useAuth(): UseAuthReturn {
 
       if (response.status) {
         setUser(response.data.user)
-        setAuthToken(response.data.token)
-        setAuthUser(response.data.user)
         router.push('/dashboard')
       } else {
         throw new Error(response.message || 'Login failed')
