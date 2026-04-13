@@ -99,6 +99,36 @@ class ApiClient {
     }
   }
 
+  async upload<T>(endpoint: string, file: File, fields: Record<string, string> = {}): Promise<T> {
+    const baseUrl = this.baseURL.startsWith("http") ? this.baseURL : `${window.location.origin}${this.baseURL}`
+    const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`
+    const normalizedEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint
+    const url = new URL(normalizedEndpoint, normalizedBaseUrl)
+    const formData = new FormData()
+    formData.append("file", file)
+
+    Object.entries(fields).forEach(([key, value]) => {
+      formData.append(key, value)
+    })
+
+    const token = typeof window !== "undefined" ? getAuthToken() : null
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(getErrorMessage(errorData, `HTTP error! status: ${response.status}`))
+    }
+
+    return response.json()
+  }
+
   // HTTP Methods
   async get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
     return this.request<T>(endpoint, { method: "GET", params })
@@ -156,6 +186,7 @@ export const api = {
 
   families: {
     getAll: (params?: Record<string, string>) => apiClient.get("/family/list", params),
+    getStats: () => apiClient.get("/family/stats"),
     getById: (id: string) => apiClient.get(`/family/${id}`),
     create: (data: any) => apiClient.post("/family/save", data),
     update: (id: string, data: any) => apiClient.put(`/family/${id}`, data),
@@ -166,11 +197,18 @@ export const api = {
 
   // Services
   services: {
-    getAll: () => apiClient.get("/services"),
-    getById: (id: string) => apiClient.get(`/services/${id}`),
-    create: (data: any) => apiClient.post("/services", data),
-    update: (id: string, data: any) => apiClient.put(`/services/${id}`, data),
-    delete: (id: string) => apiClient.delete(`/services/${id}`),
+    getAll: (params?: Record<string, string>) => apiClient.get("/service/list", params),
+    getById: (id: string) => apiClient.get(`/service/${id}`),
+    getStats: () => apiClient.get("/service/stats"),
+    create: (data: any) => apiClient.post("/service/save", data),
+    update: (id: string, data: any) => apiClient.put(`/service/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/service/${id}`),
+    getAttendance: (id: string) => apiClient.get(`/service/${id}/attendance`),
+    recordAttendance: (id: string, data: any) => apiClient.post(`/service/${id}/attendance`, data),
+    bulkAttendance: (id: string, data: any) => apiClient.post(`/service/${id}/attendance/bulk`, data),
+    sendNotifications: (id: string, data: any) => apiClient.post(`/service/${id}/notifications`, data),
+    addSupporter: (id: string, data: any) => apiClient.post(`/service/${id}/supporters`, data),
+    removeSupporter: (id: string, memberId: string) => apiClient.delete(`/service/${id}/supporters/${memberId}`),
   },
 
   // Finance
@@ -198,13 +236,20 @@ export const api = {
     getTemplates: () => apiClient.get("/communication/templates"),
   },
 
+  uploads: {
+    file: (file: File, fields?: Record<string, string>) => apiClient.upload("/file-upload", file, fields),
+  },
+
   // Groups
   groups: {
-    getAll: () => apiClient.get("/groups"),
-    getById: (id: string) => apiClient.get(`/groups/${id}`),
-    create: (data: any) => apiClient.post("/groups", data),
-    update: (id: string, data: any) => apiClient.put(`/groups/${id}`, data),
-    delete: (id: string) => apiClient.delete(`/groups/${id}`),
-    getMembers: (groupId: string) => apiClient.get(`/groups/${groupId}/members`),
+    getAll: (params?: Record<string, string>) => apiClient.get("/group/list", params),
+    getById: (id: string) => apiClient.get(`/group/${id}`),
+    getStats: () => apiClient.get("/group/stats"),
+    create: (data: any) => apiClient.post("/group/save", data),
+    update: (id: string, data: any) => apiClient.put(`/group/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/group/${id}`),
+    addMember: (id: string, data: any) => apiClient.post(`/group/${id}/members`, data),
+    removeMember: (id: string, memberId: string) => apiClient.delete(`/group/${id}/members/${memberId}`),
+    updateMemberRole: (id: string, memberId: string, data: any) => apiClient.put(`/group/${id}/members/${memberId}/role`, data),
   },
 }
