@@ -58,53 +58,51 @@ export function MemberDetailsModal({ isOpen, onClose, member }: MemberDetailsMod
                     <CardTitle className="text-lg">Personal Information</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Date of Birth:</span>
-                        <span>{member.dateOfBirth || "Not specified"}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <UserCircle2 className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Title:</span>
-                        <span>{member.title || "Not specified"}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Award className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Baptism Status:</span>
-                        <span>{member.isBaptised ? "Baptized" : "Not baptized"}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Occupation:</span>
-                        <span>{member.occupation || "Not specified"}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">Account Type:</span>
-                        <span>{member.accountType || "Not specified"}</span>
-                      </div>
-
-                      {member.isBaptised && (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">Baptism Date:</span>
-                            <span>{formatDate(member.baptismDate)}</span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Church className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">Baptism Location:</span>
-                            <span>{member.baptismLocation || "Not specified"}</span>
-                          </div>
-                        </>
-                      )}
+                    <div className="flex items-center gap-2">
+                      <UserCircle2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Title:</span>
+                      <span>{member.title || "Not specified"}</span>
                     </div>
+
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Date of Birth:</span>
+                      <span>{member.dateOfBirth || "Not specified"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Occupation:</span>
+                      <span>{member.occupation || "Not specified"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Account Type:</span>
+                      <span>{member.accountType || "Not specified"}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Award className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Baptism Status:</span>
+                      <span>{member.isBaptised ? "Baptized" : "Not baptized"}</span>
+                    </div>
+
+                    {member.isBaptised && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Baptism Date:</span>
+                          <span>{formatDate(member.baptismDate)}</span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Church className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Baptism Location:</span>
+                          <span>{member.baptismLocation || "Not specified"}</span>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

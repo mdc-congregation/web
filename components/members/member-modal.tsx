@@ -111,6 +111,14 @@ export function MemberModal({ isOpen, onClose, member, onSave, isSaving }: Membe
     }
   }, [isOpen])
 
+  useEffect(() => {
+    return () => {
+      if (imagePreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview)
+      }
+    }
+  }, [imagePreview])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -133,15 +141,23 @@ export function MemberModal({ isOpen, onClose, member, onSave, isSaving }: Membe
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (imagePreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview)
+      }
+
       const previewUrl = URL.createObjectURL(file)
       setImagePreview(previewUrl)
 
       try {
         setIsUploadingImage(true)
         const authUser = getAuthUser()
+        if (!authUser?.id) {
+          throw new Error("You must be logged in to upload a profile image.")
+        }
+
         const response = await (api.uploads.file(file, {
           upload_type: "profile",
-          user_id: authUser?.id ?? "",
+          user_id: authUser.id,
         }) as Promise<{
           data?: {
             url?: string
@@ -163,6 +179,9 @@ export function MemberModal({ isOpen, onClose, member, onSave, isSaving }: Membe
           description: response.message ?? "Profile image uploaded successfully.",
         })
       } catch (error) {
+        if (previewUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(previewUrl)
+        }
         setImagePreview(formData.profilePhoto || member?.profilePhoto || null)
         toast({
           variant: "destructive",
@@ -195,7 +214,7 @@ export function MemberModal({ isOpen, onClose, member, onSave, isSaving }: Membe
             <div className="relative">
               <Avatar className="h-24 w-24">
                 <AvatarImage
-                  src={imagePreview || "/placeholder.svg?height=96&width=96"}
+                  src={imagePreview || formData.profilePhoto || "/placeholder.svg?height=96&width=96"}
                   alt="Profile"
                 />
                 <AvatarFallback>
@@ -669,8 +688,8 @@ export function MemberModal({ isOpen, onClose, member, onSave, isSaving }: Membe
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Saving..." : member ? "Update Member" : "Add Member"}
+            <Button type="submit" disabled={isSaving || isUploadingImage}>
+              {isUploadingImage ? "Uploading image..." : isSaving ? "Saving..." : member ? "Update Member" : "Add Member"}
             </Button>
           </DialogFooter>
         </form>
