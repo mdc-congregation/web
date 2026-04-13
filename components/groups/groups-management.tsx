@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,10 +12,20 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export function GroupsManagement() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedGroup, setSelectedGroup] = useState(null)
-  const { groups, loading } = useGroups()
   const [activeTab, setActiveTab] = useState("all")
+  const { groups, stats, memberOptions, loading, isSaving, error, saveGroup, getGroup, addMember, removeMember, updateMemberRole, deleteGroup } =
+    useGroups(debouncedSearchTerm, activeTab)
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim())
+    }, 300)
+
+    return () => window.clearTimeout(timeout)
+  }, [searchTerm])
 
   const handleAddGroup = () => {
     setSelectedGroup(null)
@@ -26,13 +36,6 @@ export function GroupsManagement() {
     setSelectedGroup(group)
     setIsModalOpen(true)
   }
-
-  const filteredGroups = groups.filter(
-    (group) =>
-      (group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        group.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (activeTab === "all" || group.type === activeTab),
-  )
 
   return (
     <div className="space-y-6">
@@ -47,6 +50,12 @@ export function GroupsManagement() {
         </Button>
       </div>
 
+      {error && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -54,9 +63,9 @@ export function GroupsManagement() {
             <CardTitle className="text-sm font-medium">Total Groups</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{stats?.total_groups.count ?? 0}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+3</span> from last month
+              +{stats?.total_groups.added_since_last_month ?? 0} from last month
             </p>
           </CardContent>
         </Card>
@@ -65,8 +74,8 @@ export function GroupsManagement() {
             <CardTitle className="text-sm font-medium">Ministry Teams</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">50% of total groups</p>
+            <div className="text-2xl font-bold">{stats?.ministry_teams.count ?? 0}</div>
+            <p className="text-xs text-muted-foreground">{stats?.ministry_teams.percentage ?? 0}% of total groups</p>
           </CardContent>
         </Card>
         <Card>
@@ -74,8 +83,8 @@ export function GroupsManagement() {
             <CardTitle className="text-sm font-medium">Small Groups</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">33% of total groups</p>
+            <div className="text-2xl font-bold">{stats?.small_groups.count ?? 0}</div>
+            <p className="text-xs text-muted-foreground">{stats?.small_groups.percentage ?? 0}% of total groups</p>
           </CardContent>
         </Card>
         <Card>
@@ -83,8 +92,8 @@ export function GroupsManagement() {
             <CardTitle className="text-sm font-medium">Committees</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4</div>
-            <p className="text-xs text-muted-foreground">17% of total groups</p>
+            <div className="text-2xl font-bold">{stats?.committees.count ?? 0}</div>
+            <p className="text-xs text-muted-foreground">{stats?.committees.percentage ?? 0}% of total groups</p>
           </CardContent>
         </Card>
       </div>
@@ -106,26 +115,45 @@ export function GroupsManagement() {
                 className="pl-8"
               />
             </div>
-            <Button variant="outline">
+            <div className="inline-flex items-center rounded-md border px-3 text-sm text-muted-foreground">
               <Filter className="mr-2 h-4 w-4" />
-              Filter
-            </Button>
+              API filter tabs
+            </div>
           </div>
 
           <Tabs defaultValue="all" className="mb-6" onValueChange={setActiveTab}>
             <TabsList>
               <TabsTrigger value="all">All Groups</TabsTrigger>
               <TabsTrigger value="ministry">Ministry Teams</TabsTrigger>
-              <TabsTrigger value="small">Small Groups</TabsTrigger>
+              <TabsTrigger value="small_group">Small Groups</TabsTrigger>
               <TabsTrigger value="committee">Committees</TabsTrigger>
+              <TabsTrigger value="department">Departments</TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <GroupsTable groups={filteredGroups} loading={loading} onEditGroup={handleEditGroup} />
+          <GroupsTable
+            groups={groups}
+            loading={loading}
+            memberOptions={memberOptions}
+            onEditGroup={handleEditGroup}
+            onRefresh={getGroup}
+            onAddMember={addMember}
+            onRemoveMember={removeMember}
+            onUpdateMemberRole={updateMemberRole}
+            onDeleteGroup={deleteGroup}
+            isSaving={isSaving}
+          />
         </CardContent>
       </Card>
 
-      <GroupModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} group={selectedGroup} />
+      <GroupModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        group={selectedGroup}
+        memberOptions={memberOptions}
+        onSave={saveGroup}
+        isSaving={isSaving}
+      />
     </div>
   )
 }
