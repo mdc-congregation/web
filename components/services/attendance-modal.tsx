@@ -14,39 +14,51 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
 
 interface AttendanceModalProps {
   isOpen: boolean
   onClose: () => void
   service?: any
+  onSave: (serviceId: string, attendance: number) => Promise<string>
+  isSaving: boolean
 }
 
-export function AttendanceModal({ isOpen, onClose, service }: AttendanceModalProps) {
+export function AttendanceModal({ isOpen, onClose, service, onSave, isSaving }: AttendanceModalProps) {
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     actualAttendance: "",
-    notes: "",
   })
 
   useEffect(() => {
     if (service) {
       setFormData({
         actualAttendance: service.actualAttendance?.toString() || "",
-        notes: "",
       })
     } else {
       setFormData({
         actualAttendance: "",
-        notes: "",
       })
     }
   }, [service])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log("Attendance recorded:", formData)
-    onClose()
+    if (!service) return
+    try {
+      const message = await onSave(service.id, Number(formData.actualAttendance))
+      toast({
+        title: "Attendance updated",
+        description: message,
+      })
+      onClose()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: error instanceof Error ? error.message : "Unable to record attendance.",
+      })
+    }
   }
 
   if (!service) return null
@@ -95,22 +107,11 @@ export function AttendanceModal({ isOpen, onClose, service }: AttendanceModalPro
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Any additional notes about the attendance"
-                rows={3}
-              />
-            </div>
-
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit">Record Attendance</Button>
+              <Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Record Attendance"}</Button>
             </DialogFooter>
           </form>
         </div>
