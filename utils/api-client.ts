@@ -9,6 +9,29 @@ interface RequestConfig {
   params?: Record<string, string>
 }
 
+const getErrorMessage = (payload: unknown, fallback: string) => {
+  if (!payload || typeof payload !== "object") {
+    return fallback
+  }
+
+  if ("errors" in payload && payload.errors && typeof payload.errors === "object") {
+    for (const value of Object.values(payload.errors as Record<string, unknown>)) {
+      if (Array.isArray(value) && value.length > 0 && typeof value[0] === "string") {
+        return value[0]
+      }
+      if (typeof value === "string" && value.trim()) {
+        return value
+      }
+    }
+  }
+
+  if ("message" in payload && typeof payload.message === "string" && payload.message.trim()) {
+    return payload.message
+  }
+
+  return fallback
+}
+
 class ApiClient {
   private baseURL: string
   private defaultHeaders: Record<string, string>
@@ -26,7 +49,9 @@ class ApiClient {
 
     // Build full URL
     const baseUrl = this.baseURL.startsWith("http") ? this.baseURL : `${window.location.origin}${this.baseURL}`
-    const url = new URL(endpoint, baseUrl)
+    const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`
+    const normalizedEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint
+    const url = new URL(normalizedEndpoint, normalizedBaseUrl)
 
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -58,7 +83,8 @@ class ApiClient {
       const response = await fetch(url.toString(), requestConfig)
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const errorData = await response.json().catch(() => null)
+        throw new Error(getErrorMessage(errorData, `HTTP error! status: ${response.status}`))
       }
 
       const contentType = response.headers.get("content-type")
@@ -115,12 +141,27 @@ export const apiClient = new ApiClient()
 export const api = {
   // Members
   members: {
-    getAll: () => apiClient.get("/member/list"),
+    getAll: (params?: Record<string, string>) => apiClient.get("/member", params),
     getById: (id: string) => apiClient.get(`/member/${id}`),
     create: (data: any) => apiClient.post("/member/save", data),
     update: (id: string, data: any) => apiClient.put(`/member/${id}`, data),
-    delete: (id: string) => apiClient.delete(`/member/${id}`),
     getCount: () => apiClient.get("/member/count"),
+  },
+
+  dashboard: {
+    getStats: () => apiClient.get("/dashboard-stats"),
+    getUpcomingBirthdays: (weekOffset = "0") =>
+      apiClient.get("/dashboard-upcoming-birthdays", { week_offset: weekOffset }),
+  },
+
+  families: {
+    getAll: (params?: Record<string, string>) => apiClient.get("/family/list", params),
+    getById: (id: string) => apiClient.get(`/family/${id}`),
+    create: (data: any) => apiClient.post("/family/save", data),
+    update: (id: string, data: any) => apiClient.put(`/family/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/family/${id}`),
+    addMembers: (id: string, data: any) => apiClient.post(`/family/${id}/members`, data),
+    removeMember: (id: string, memberId: string) => apiClient.delete(`/family/${id}/members/${memberId}`),
   },
 
   // Services

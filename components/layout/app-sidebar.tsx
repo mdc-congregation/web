@@ -29,6 +29,7 @@ const navigationItems = [
     title: "Management",
     items: [
       { title: "Members", url: "/members", icon: Users },
+      { title: "Families", url: "/families", icon: Users },
       { title: "Services", url: "/services", icon: Calendar },
       { title: "Groups", url: "/groups", icon: UserCheck },
     ],
