@@ -92,6 +92,8 @@ export interface Member extends MemberFormValues {
   status: 'active' | 'inactive' | 'visitor'
   joinDate: string
   family?: string
+  families: Array<{ id: string; name: string }>
+  groups: Array<{ id: string; name: string }>
   avatar?: string
   dateOfBirth?: string
   dateOfBirthShort?: string
@@ -131,6 +133,14 @@ export const normalizeMember = (member: MemberApiRecord): Member => {
   const dobParts = [member.dob_month, member.dob_day, member.dob_year].filter(Boolean)
   const primaryFamily = member.families?.[0]
   const familyName = primaryFamily?.family_name ?? primaryFamily?.name ?? ''
+  const families = (member.families ?? []).map((family) => ({
+    id: family.id,
+    name: family.family_name ?? family.name ?? "",
+  })).filter((family) => family.name)
+  const groups = (member.groups ?? []).map((group) => ({
+    id: group.id,
+    name: group.name ?? "",
+  })).filter((group) => group.name)
 
   return {
     id: member.id,
@@ -152,6 +162,8 @@ export const normalizeMember = (member: MemberApiRecord): Member => {
     country: member.country ?? '',
     familyId: primaryFamily?.id ?? '',
     family: familyName || undefined,
+    families,
+    groups,
     occupation: member.occupation ?? '',
     maritalStatus: member.marital_status ?? 'single',
     membershipStatus: member.membership_status ?? 'visitor',

@@ -1,147 +1,236 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
+import { api } from "@/utils/api-client"
+import {
+  emptyServiceFormValues,
+  normalizeService,
+  serializeServiceForm,
+  type ServiceApiRecord,
+  type ServiceFormValues,
+  type ServiceView,
+} from "@/utils/services"
 
-export function useServices() {
-  const [services, setServices] = useState([])
-  const [attendance, setAttendance] = useState([])
+type ApiResponse<T> = {
+  status: boolean
+  message: string
+  data: T
+}
+
+type ServicesListPayload = {
+  current_page: number
+  data: ServiceApiRecord[]
+  total: number
+  per_page: number
+  last_page: number
+  from: number | null
+  to: number | null
+}
+
+type ServiceStatsPayload = {
+  total_services: {
+    count: number
+    percentage_increase: number
+  }
+  scheduled_services: {
+    count: number
+    percentage_of_total: number
+  }
+  upcoming_services: number
+  attendance_this_week: {
+    count: number
+    percentage_increase: number
+  }
+}
+
+type MemberOption = {
+  id: string
+  first_name: string
+  last_name: string
+  phone?: string | null
+}
+
+type MembersPayload = {
+  data: MemberOption[]
+}
+
+export function useServices(searchTerm: string, page: number, perPage: number) {
+  const [services, setServices] = useState<ServiceView[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<ServiceStatsPayload | null>(null)
+  const [memberOptions, setMemberOptions] = useState<Array<{ id: string; name: string; phone?: string | null }>>([])
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    lastPage: 1,
+    perPage: 10,
+    total: 0,
+    from: 0,
+    to: 0,
+  })
 
-  useEffect(() => {
-    fetchServicesData()
-  }, [])
-
-  const fetchServicesData = async () => {
+  const fetchServicesData = useCallback(async () => {
     try {
       setLoading(true)
+      setError(null)
 
-      // Mock services data
-      const mockServices = [
-        {
-          id: "1",
-          title: "Sunday Morning Service",
-          type: "sunday_service",
-          date: "2024-01-21",
-          time: "10:00",
-          preacher: "Pastor John Smith",
-          chairman: "Elder Michael Chen",
-          supporters: ["Deacon Sarah Johnson", "Brother David Wilson"],
-          specialGuests: ["Evangelist Mary Brown"],
-          location: "Main Sanctuary",
-          expectedAttendance: 900,
-          actualAttendance: 892,
-          status: "completed",
-          description: "Regular Sunday morning worship service",
-        },
-        {
-          id: "2",
-          title: "Youth Conference 2024",
-          type: "conference",
-          date: "2024-03-15",
-          time: "09:00",
-          preacher: "Pastor Youth Leader",
-          chairman: "Youth Pastor Emily Davis",
-          supporters: ["Youth Team Leader 1", "Youth Team Leader 2"],
-          specialGuests: ["Guest Speaker Rev. James Wilson", "Worship Leader Lisa Anderson"],
-          location: "Conference Hall",
-          expectedAttendance: 300,
-          status: "scheduled",
-          description: "Annual youth conference with special guests and workshops",
-        },
-        {
-          id: "3",
-          title: "Prayer Meeting",
-          type: "prayer_meeting",
-          date: "2024-01-24",
-          time: "19:00",
-          preacher: "Pastor Assistant",
-          chairman: "Prayer Coordinator",
-          supporters: ["Prayer Team Leader"],
-          specialGuests: [],
-          location: "Prayer Room",
-          expectedAttendance: 150,
-          actualAttendance: 142,
-          status: "completed",
-          description: "Weekly prayer meeting for the church community",
-        },
-        {
-          id: "4",
-          title: "Easter Crusade",
-          type: "crusade",
-          date: "2024-03-29",
-          time: "18:00",
-          preacher: "Guest Evangelist Peter Johnson",
-          chairman: "Senior Pastor",
-          supporters: ["Associate Pastor", "Worship Leader", "Technical Team Lead"],
-          specialGuests: ["Healing Minister Dr. Grace Thompson", "Choir Director Mark Davis"],
-          location: "Main Sanctuary",
-          expectedAttendance: 1200,
-          status: "scheduled",
-          description: "Special Easter crusade with healing and deliverance ministry",
-        },
-      ]
+      const [servicesResponse, statsResponse, membersResponse] = await Promise.all([
+        api.services.getAll({
+          page: String(page),
+          per_page: String(perPage),
+          ...(searchTerm.trim() ? { search: searchTerm.trim() } : {}),
+        }) as Promise<
+          ApiResponse<ServicesListPayload>
+        >,
+        api.services.getStats() as Promise<ApiResponse<ServiceStatsPayload>>,
+        api.members.getAll({ per_page: "100" }) as Promise<ApiResponse<MembersPayload>>,
+      ])
 
-      // Mock attendance data
-      const mockAttendance = [
-        {
-          id: "1",
-          serviceTitle: "Sunday Morning Service",
-          date: "2024-01-21",
-          expectedAttendance: 900,
-          actualAttendance: 892,
-          attendanceRate: 99.1,
-          type: "Sunday Service",
-        },
-        {
-          id: "2",
-          serviceTitle: "Prayer Meeting",
-          date: "2024-01-24",
-          expectedAttendance: 150,
-          actualAttendance: 142,
-          attendanceRate: 94.7,
-          type: "Prayer Meeting",
-        },
-        {
-          id: "3",
-          serviceTitle: "Bible Study",
-          date: "2024-01-17",
-          expectedAttendance: 200,
-          actualAttendance: 178,
-          attendanceRate: 89.0,
-          type: "Bible Study",
-        },
-        {
-          id: "4",
-          serviceTitle: "Sunday Evening Service",
-          date: "2024-01-14",
-          expectedAttendance: 600,
-          actualAttendance: 520,
-          attendanceRate: 86.7,
-          type: "Sunday Service",
-        },
-        {
-          id: "5",
-          serviceTitle: "Youth Service",
-          date: "2024-01-13",
-          expectedAttendance: 250,
-          actualAttendance: 195,
-          attendanceRate: 78.0,
-          type: "Youth Service",
-        },
-      ]
-
-      // Simulate API delay
-      setTimeout(() => {
-        setServices(mockServices)
-        setAttendance(mockAttendance)
-        setLoading(false)
-      }, 1000)
+      const normalizedServices = servicesResponse.data.data.map(normalizeService)
+      setServices(normalizedServices)
+      setPagination({
+        currentPage: servicesResponse.data.current_page,
+        lastPage: servicesResponse.data.last_page,
+        perPage: servicesResponse.data.per_page,
+        total: servicesResponse.data.total,
+        from: servicesResponse.data.from ?? 0,
+        to: servicesResponse.data.to ?? 0,
+      })
+      setStats(statsResponse.data)
+      setMemberOptions(
+        membersResponse.data.data.map((member) => ({
+          id: member.id,
+          name: `${member.first_name} ${member.last_name}`.trim(),
+          phone: member.phone,
+        })),
+      )
     } catch (err) {
-      setError(err)
+      setError(err instanceof Error ? err.message : "Failed to load services.")
+    } finally {
       setLoading(false)
     }
-  }
+  }, [page, perPage, searchTerm])
 
-  return { services, attendance, loading, error, refetch: fetchServicesData }
+  useEffect(() => {
+    void fetchServicesData()
+  }, [fetchServicesData])
+
+  const saveService = useCallback(
+    async (formData: ServiceFormValues, existingService?: ServiceView | null) => {
+      try {
+        setIsSaving(true)
+        setError(null)
+
+        const response = (existingService
+          ? await (api.services.update(existingService.id, serializeServiceForm(formData)) as Promise<ApiResponse<ServiceApiRecord>>)
+          : await (api.services.create(serializeServiceForm(formData)) as Promise<ApiResponse<ServiceApiRecord>>))
+
+        const savedService = normalizeService(response.data)
+
+        const existingSupporters = new Map((existingService?.supporters ?? []).map((supporter) => [supporter.memberId, supporter.role]))
+        const nextSupporters = new Map(formData.supporters.map((supporter) => [supporter.memberId, supporter.role]))
+
+        if (existingService) {
+          for (const supporter of existingService.supporters) {
+            if (!nextSupporters.has(supporter.memberId) || nextSupporters.get(supporter.memberId) !== supporter.role) {
+              await api.services.removeSupporter(savedService.id, supporter.memberId)
+            }
+          }
+        }
+
+        for (const supporter of formData.supporters) {
+          if (!existingSupporters.has(supporter.memberId) || existingSupporters.get(supporter.memberId) !== supporter.role) {
+            await api.services.addSupporter(savedService.id, {
+              member_id: supporter.memberId,
+              role: supporter.role,
+            })
+          }
+        }
+
+        await fetchServicesData()
+        return {
+          service: savedService,
+          message: response.message,
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to save service."
+        setError(message)
+        throw new Error(message)
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    [fetchServicesData],
+  )
+
+  const updateAttendance = useCallback(
+    async (serviceId: string, attendance: number) => {
+      const response = await (api.services.update(serviceId, { attendance }) as Promise<ApiResponse<ServiceApiRecord>>)
+      await fetchServicesData()
+      return response.message
+    },
+    [fetchServicesData],
+  )
+
+  const sendNotification = useCallback(
+    async (serviceId: string, announcementMessage: string) => {
+      const response = await (api.services.sendNotifications(serviceId, { announcement_message: announcementMessage }) as Promise<
+        ApiResponse<{ recipient_count: number }>
+      >)
+      await fetchServicesData()
+      return response.message
+    },
+    [fetchServicesData],
+  )
+
+  const deleteService = useCallback(
+    async (serviceId: string) => {
+      try {
+        setIsSaving(true)
+        setError(null)
+        const response = await (api.services.delete(serviceId) as Promise<ApiResponse<null>>)
+        await fetchServicesData()
+        return response.message
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to delete service."
+        setError(message)
+        throw new Error(message)
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    [fetchServicesData],
+  )
+
+  return {
+    services,
+    attendance: services
+      .filter((service) => service.actualAttendance !== undefined && service.actualAttendance !== null)
+      .map((service) => {
+        const expected = Number(service.expectedAttendance || 0)
+        const actual = Number(service.actualAttendance || 0)
+        return {
+          id: service.id,
+          serviceTitle: service.title,
+          date: service.date,
+          expectedAttendance: expected,
+          actualAttendance: actual,
+          attendanceRate: expected > 0 ? Number(((actual / expected) * 100).toFixed(1)) : 0,
+          type: service.type,
+        }
+      }),
+    stats,
+    pagination,
+    memberOptions,
+    loading,
+    isSaving,
+    error,
+    emptyForm: emptyServiceFormValues,
+    refetch: fetchServicesData,
+    saveService,
+    updateAttendance,
+    sendNotification,
+    deleteService,
+  }
 }
