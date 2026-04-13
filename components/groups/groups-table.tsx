@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useState } from "react"
 import { GroupDetailsModal } from "./group-details-modal"
 import type { GroupView } from "@/utils/groups"
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 
 interface GroupsTableProps {
   groups: GroupView[]
@@ -20,6 +21,12 @@ interface GroupsTableProps {
   onUpdateMemberRole: (groupId: string, memberId: string, role: "leader" | "member" | "observer") => Promise<{ group: GroupView; message: string }>
   onDeleteGroup: (groupId: string) => Promise<string>
   isSaving: boolean
+  currentPage: number
+  lastPage: number
+  total: number
+  from: number
+  to: number
+  onPageChange: (page: number) => void
 }
 
 export function GroupsTable({
@@ -33,6 +40,12 @@ export function GroupsTable({
   onUpdateMemberRole,
   onDeleteGroup,
   isSaving,
+  currentPage,
+  lastPage,
+  total,
+  from,
+  to,
+  onPageChange,
 }: GroupsTableProps) {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedGroup, setSelectedGroup] = useState<GroupView | null>(null)
@@ -45,8 +58,6 @@ export function GroupsTable({
     switch (type) {
       case "ministry":
         return "Ministry Team"
-      case "small_group":
-        return "Small Group"
       case "department":
         return "Department"
       case "committee":
@@ -126,6 +137,44 @@ export function GroupsTable({
           )}
         </TableBody>
       </Table>
+      <div className="flex items-center justify-between border-t px-4 py-3">
+        <p className="text-sm text-muted-foreground">
+          {total > 0 ? `Showing ${from} to ${to} of ${total} groups` : "No groups found"}
+        </p>
+        <Pagination className="mx-0 w-auto justify-end">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(event) => {
+                  event.preventDefault()
+                  if (currentPage > 1) {
+                    onPageChange(currentPage - 1)
+                  }
+                }}
+                className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-3 text-sm text-muted-foreground">
+                Page {currentPage} of {lastPage}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(event) => {
+                  event.preventDefault()
+                  if (currentPage < lastPage) {
+                    onPageChange(currentPage + 1)
+                  }
+                }}
+                className={currentPage >= lastPage ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
       <GroupDetailsModal
         isOpen={isDetailsModalOpen}
         onClose={() => {

@@ -85,7 +85,6 @@ export function GroupModal({ isOpen, onClose, group, memberOptions, onSave, isSa
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ministry">Ministry</SelectItem>
-                  <SelectItem value="small_group">Small Group</SelectItem>
                   <SelectItem value="committee">Committee</SelectItem>
                   <SelectItem value="department">Department</SelectItem>
                 </SelectContent>

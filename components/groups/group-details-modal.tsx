@@ -46,8 +46,6 @@ const getTypeLabel = (type: string) => {
   switch (type) {
     case "ministry":
       return "Ministry"
-    case "small_group":
-      return "Small Group"
     case "committee":
       return "Committee"
     case "department":

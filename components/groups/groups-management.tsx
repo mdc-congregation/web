@@ -13,11 +13,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 export function GroupsManagement() {
   const [searchTerm, setSearchTerm] = useState("")
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(5)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [activeTab, setActiveTab] = useState("all")
-  const { groups, stats, memberOptions, loading, isSaving, error, saveGroup, getGroup, addMember, removeMember, updateMemberRole, deleteGroup } =
-    useGroups(debouncedSearchTerm, activeTab)
+  const { groups, stats, pagination, memberOptions, loading, isSaving, error, saveGroup, getGroup, addMember, removeMember, updateMemberRole, deleteGroup } =
+    useGroups(debouncedSearchTerm, activeTab, page, perPage)
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -26,6 +28,10 @@ export function GroupsManagement() {
 
     return () => window.clearTimeout(timeout)
   }, [searchTerm])
+
+  useEffect(() => {
+    setPage(1)
+  }, [activeTab, debouncedSearchTerm, perPage])
 
   const handleAddGroup = () => {
     setSelectedGroup(null)
@@ -42,7 +48,7 @@ export function GroupsManagement() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Groups</h1>
-          <p className="text-muted-foreground">Manage ministry teams, small groups, and committees.</p>
+          <p className="text-muted-foreground">Manage ministries, departments, and committees.</p>
         </div>
         <Button onClick={handleAddGroup}>
           <Plus className="mr-2 h-4 w-4" />
@@ -80,11 +86,11 @@ export function GroupsManagement() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Small Groups</CardTitle>
+            <CardTitle className="text-sm font-medium">Departments</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.small_groups.count ?? 0}</div>
-            <p className="text-xs text-muted-foreground">{stats?.small_groups.percentage ?? 0}% of total groups</p>
+            <div className="text-2xl font-bold">{stats?.departments.count ?? 0}</div>
+            <p className="text-xs text-muted-foreground">{stats?.departments.percentage ?? 0}% of total groups</p>
           </CardContent>
         </Card>
         <Card>
@@ -115,6 +121,16 @@ export function GroupsManagement() {
                 className="pl-8"
               />
             </div>
+            <select
+              value={String(perPage)}
+              onChange={(event) => setPerPage(Number(event.target.value))}
+              className="h-10 rounded-md border bg-background px-3 text-sm"
+            >
+              <option value="5">5 rows</option>
+              <option value="10">10 rows</option>
+              <option value="20">20 rows</option>
+              <option value="50">50 rows</option>
+            </select>
             <div className="inline-flex items-center rounded-md border px-3 text-sm text-muted-foreground">
               <Filter className="mr-2 h-4 w-4" />
               API filter tabs
@@ -125,7 +141,6 @@ export function GroupsManagement() {
             <TabsList>
               <TabsTrigger value="all">All Groups</TabsTrigger>
               <TabsTrigger value="ministry">Ministry Teams</TabsTrigger>
-              <TabsTrigger value="small_group">Small Groups</TabsTrigger>
               <TabsTrigger value="committee">Committees</TabsTrigger>
               <TabsTrigger value="department">Departments</TabsTrigger>
             </TabsList>
@@ -142,6 +157,12 @@ export function GroupsManagement() {
             onUpdateMemberRole={updateMemberRole}
             onDeleteGroup={deleteGroup}
             isSaving={isSaving}
+            currentPage={pagination.currentPage}
+            lastPage={pagination.lastPage}
+            total={pagination.total}
+            from={pagination.from}
+            to={pagination.to}
+            onPageChange={setPage}
           />
         </CardContent>
       </Card>
