@@ -46,6 +46,25 @@ type MembersListPayload = {
   data: MemberRecord[]
 }
 
+type FamilyStatsPayload = {
+  total_families: {
+    count: number
+    new_this_month: number
+  }
+  linked_members: {
+    count: number
+    average_per_family: number
+  }
+  active_families: {
+    count: number
+    percentage: number
+  }
+  empty_families: {
+    count: number
+    percentage: number
+  }
+}
+
 export type FamilyListItem = {
   id: string
   name: string
@@ -87,6 +106,7 @@ export function useFamilies(searchTerm: string, page: number, perPage: number) {
   const [loading, setLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<FamilyStatsPayload | null>(null)
   const [pagination, setPagination] = useState<PaginationState>({
     currentPage: 1,
     lastPage: 1,
@@ -125,14 +145,18 @@ export function useFamilies(searchTerm: string, page: number, perPage: number) {
 
   const fetchMemberOptions = useCallback(async () => {
     try {
-      const response = await (api.members.getAll({ per_page: "100" }) as Promise<ApiResponse<MembersListPayload>>)
+      const [membersResponse, statsResponse] = await Promise.all([
+        api.members.getAll({ per_page: "100" }) as Promise<ApiResponse<MembersListPayload>>,
+        api.families.getStats() as Promise<ApiResponse<FamilyStatsPayload>>,
+      ])
       setMemberOptions(
-        response.data.data.map((member) => ({
+        membersResponse.data.data.map((member) => ({
           id: member.id,
           name: `${member.first_name} ${member.last_name}`.trim(),
           phone: member.phone,
         })),
       )
+      setStats(statsResponse.data)
     } catch (err) {
       console.error("[v0] Failed to load member options:", err)
     }
@@ -230,6 +254,7 @@ export function useFamilies(searchTerm: string, page: number, perPage: number) {
     loading,
     isSaving,
     error,
+    stats,
     pagination,
     refetch: fetchFamilies,
     createFamily,

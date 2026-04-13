@@ -43,6 +43,7 @@ export function FamilyManagement() {
     loading,
     isSaving,
     error,
+    stats,
     pagination,
     createFamily,
     updateFamily,
@@ -215,6 +216,51 @@ export function FamilyManagement() {
           {error}
         </div>
       )}
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Families</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.total_families.count ?? 0}</div>
+            <p className="text-xs text-muted-foreground">{stats?.total_families.new_this_month ?? 0} added this month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Linked Members</CardTitle>
+            <Link2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.linked_members.count ?? 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Avg {stats?.linked_members.average_per_family ?? 0} members per family
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Families</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.active_families.count ?? 0}</div>
+            <p className="text-xs text-muted-foreground">{stats?.active_families.percentage ?? 0}% have members linked</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Empty Families</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.empty_families.count ?? 0}</div>
+            <p className="text-xs text-muted-foreground">{stats?.empty_families.percentage ?? 0}% still need members linked</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
