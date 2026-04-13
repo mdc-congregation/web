@@ -1,72 +1,134 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
+import { api } from "@/utils/api-client"
+import {
+  emptyMemberFormValues,
+  normalizeMember,
+  serializeMemberForm,
+  type Member,
+  type MemberApiRecord,
+  type MemberFormValues,
+} from "@/utils/members"
 
-export function useMembers() {
-  const [members, setMembers] = useState([])
+type ApiResponse<T> = {
+  status: boolean
+  message: string
+  data: T
+}
+
+type MembersListPayload = {
+  current_page: number
+  data: MemberApiRecord[]
+  total: number
+  per_page: number
+  last_page: number
+  from: number | null
+  to: number | null
+}
+
+type MemberCountPayload = {
+  count: number
+  active: number
+  inactive: number
+  visitors: number
+  new_this_month: number
+}
+
+export function useMembers(searchTerm: string, page: number, perPage: number) {
+  const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    lastPage: 1,
+    perPage: 10,
+    total: 0,
+    from: 0,
+    to: 0,
+  })
+  const [stats, setStats] = useState<MemberCountPayload>({
+    count: 0,
+    active: 0,
+    inactive: 0,
+    visitors: 0,
+    new_this_month: 0,
+  })
 
-  useEffect(() => {
-    fetchMembers()
-  }, [])
-
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     try {
       setLoading(true)
-      // For demo purposes, using mock data
-      const mockMembers = [
-        {
-          id: "1",
-          name: "John Smith",
-          firstName: "John",
-          lastName: "Smith",
-          email: "john.smith@email.com",
-          phone: "(555) 123-4567",
-          status: "active",
-          joinDate: "2023-01-15",
-          family: "Smith Family",
-          ministry: "Worship Team",
-          avatar: "/placeholder.svg?height=32&width=32",
-        },
-        {
-          id: "2",
-          name: "Sarah Johnson",
-          firstName: "Sarah",
-          lastName: "Johnson",
-          email: "sarah.johnson@email.com",
-          phone: "(555) 234-5678",
-          status: "active",
-          joinDate: "2023-03-22",
-          family: "Johnson Family",
-          ministry: "Children's Ministry",
-          avatar: "/placeholder.svg?height=32&width=32",
-        },
-        {
-          id: "3",
-          name: "Michael Chen",
-          firstName: "Michael",
-          lastName: "Chen",
-          email: "michael.chen@email.com",
-          phone: "(555) 345-6789",
-          status: "active",
-          joinDate: "2022-11-08",
-          family: "Chen Family",
-          ministry: "Youth Group",
-          avatar: "/placeholder.svg?height=32&width=32",
-        },
-      ]
+      setError(null)
 
-      // Simulate API delay
-      setTimeout(() => {
-        setMembers(mockMembers)
-        setLoading(false)
-      }, 1000)
+      const [membersResponse, countResponse] = await Promise.all([
+        api.members.getAll({
+          page: String(page),
+          per_page: String(perPage),
+          ...(searchTerm.trim() ? { search: searchTerm.trim() } : {}),
+        }) as Promise<ApiResponse<MembersListPayload>>,
+        api.members.getCount() as Promise<ApiResponse<MemberCountPayload>>,
+      ])
+
+      setMembers(membersResponse.data.data.map(normalizeMember))
+      setPagination({
+        currentPage: membersResponse.data.current_page,
+        lastPage: membersResponse.data.last_page,
+        perPage: membersResponse.data.per_page,
+        total: membersResponse.data.total,
+        from: membersResponse.data.from ?? 0,
+        to: membersResponse.data.to ?? 0,
+      })
+      setStats(countResponse.data)
     } catch (err) {
-      setError(err)
+      setError(err instanceof Error ? err.message : "Failed to load members.")
+    } finally {
       setLoading(false)
     }
-  }
+  }, [page, perPage, searchTerm])
 
-  return { members, loading, error, refetch: fetchMembers }
+  useEffect(() => {
+    void fetchMembers()
+  }, [fetchMembers])
+
+  const saveMember = useCallback(
+    async (formData: MemberFormValues, memberId?: string) => {
+      try {
+        setIsSaving(true)
+        setError(null)
+
+        const payload = serializeMemberForm(formData)
+        const response = (memberId
+          ? await (api.members.update(memberId, payload) as Promise<ApiResponse<MemberApiRecord>>)
+          : await (api.members.create(payload) as Promise<ApiResponse<MemberApiRecord>>))
+
+        const savedMember = normalizeMember(response.data)
+        await fetchMembers()
+
+        return {
+          member: savedMember,
+          message: response.message,
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to save member."
+        setError(message)
+        throw new Error(message)
+      } finally {
+        setIsSaving(false)
+      }
+    },
+    [fetchMembers],
+  )
+
+  return {
+    members,
+    loading,
+    isSaving,
+    error,
+    stats,
+    pagination,
+    emptyForm: emptyMemberFormValues,
+    refetch: fetchMembers,
+    saveMember,
+  }
 }

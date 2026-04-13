@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Plus, Filter, Download } from "lucide-react"
 import { MembersTable } from "./members-table"
 import { MemberModal } from "./member-modal"
@@ -11,9 +12,24 @@ import { useMembers } from "@/hooks/use-members"
 
 export function MembersManagement() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState(null)
-  const { members, loading } = useMembers()
+  const { members, loading, stats, pagination, isSaving, saveMember } = useMembers(debouncedSearchTerm, page, perPage)
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim())
+    }, 300)
+
+    return () => window.clearTimeout(timeout)
+  }, [searchTerm])
+
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearchTerm, perPage])
 
   const handleAddMember = () => {
     setSelectedMember(null)
@@ -24,12 +40,6 @@ export function MembersManagement() {
     setSelectedMember(member)
     setIsModalOpen(true)
   }
-
-  const filteredMembers = members.filter(
-    (member) =>
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
 
   return (
     <div className="space-y-6">
@@ -51,10 +61,8 @@ export function MembersManagement() {
             <CardTitle className="text-sm font-medium">Total Members</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,247</div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+12</span> from last month
-            </p>
+            <div className="text-2xl font-bold">{stats.count}</div>
+            <p className="text-xs text-muted-foreground">{stats.new_this_month} added this month</p>
           </CardContent>
         </Card>
         <Card>
@@ -62,28 +70,28 @@ export function MembersManagement() {
             <CardTitle className="text-sm font-medium">Active Members</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,156</div>
-            <p className="text-xs text-muted-foreground">92.7% of total</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New This Month</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">23</div>
+            <div className="text-2xl font-bold">{stats.active}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+15%</span> from last month
+              {stats.count > 0 ? `${((stats.active / stats.count) * 100).toFixed(1)}% of total` : "0% of total"}
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Families</CardTitle>
+            <CardTitle className="text-sm font-medium">Visitors</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">456</div>
-            <p className="text-xs text-muted-foreground">Average 2.7 members</p>
+            <div className="text-2xl font-bold">{stats.visitors}</div>
+            <p className="text-xs text-muted-foreground">Current visitor records</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Inactive Members</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.inactive}</div>
+            <p className="text-xs text-muted-foreground">Members currently marked inactive</p>
           </CardContent>
         </Card>
       </div>
@@ -105,21 +113,48 @@ export function MembersManagement() {
                 className="pl-8"
               />
             </div>
-            <Button variant="outline">
+            <Select value={String(perPage)} onValueChange={(value) => setPerPage(Number(value))}>
+              <SelectTrigger className="w-[120px]">
+                <SelectValue placeholder="Rows" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 rows</SelectItem>
+                <SelectItem value="20">20 rows</SelectItem>
+                <SelectItem value="50">50 rows</SelectItem>
+                <SelectItem value="100">100 rows</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" disabled>
               <Filter className="mr-2 h-4 w-4" />
               Filter
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" disabled>
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
           </div>
 
-          <MembersTable members={filteredMembers} loading={loading} onEditMember={handleEditMember} />
+          <MembersTable
+            members={members}
+            loading={loading}
+            onEditMember={handleEditMember}
+            currentPage={pagination.currentPage}
+            lastPage={pagination.lastPage}
+            total={pagination.total}
+            from={pagination.from}
+            to={pagination.to}
+            onPageChange={setPage}
+          />
         </CardContent>
       </Card>
 
-      <MemberModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} member={selectedMember} />
+      <MemberModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        member={selectedMember}
+        onSave={saveMember}
+        isSaving={isSaving}
+      />
     </div>
   )
 }

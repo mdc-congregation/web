@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -23,48 +24,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { api } from "@/utils/api-client";
+import {
+  emptyMemberFormValues,
+  MEMBER_ACCOUNT_TYPE_OPTIONS,
+  MEMBER_TITLE_OPTIONS,
+  type Member,
+  type MemberFormValues,
+} from "@/utils/members";
 
 interface MemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  member?: any;
+  member?: Member | null;
+  onSave: (formData: MemberFormValues, memberId?: string) => Promise<{ member: Member; message: string }>;
+  isSaving: boolean;
 }
 
-export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
-  const [formData, setFormData] = useState({
-    // Required fields
-    firstName: "",
-    lastName: "",
-    gender: "",
-    dobMonth: "",
-    dobDay: "",
-    phone: "",
-    address: "",
-
-    // Optional fields
-    dobYear: "",
-    email: "",
-    contactPerson: "",
-    city: "",
-    country: "",
-    familyId: "",
-    occupation: "",
-    maritalStatus: "single",
-    membershipStatus: "visitor",
-    isBaptised: false,
-    baptismDate: "",
-    baptismLocation: "",
-    baptismChurch: "",
-    ministry: "",
-    profilePhoto: "",
-    notes: "",
-  });
+export function MemberModal({ isOpen, onClose, member, onSave, isSaving }: MemberModalProps) {
+  const { toast } = useToast()
+  const [formData, setFormData] = useState<MemberFormValues>(emptyMemberFormValues());
+  const [families, setFamilies] = useState<Array<{ id: string; name: string }>>([])
+  const [familySearch, setFamilySearch] = useState("")
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (member) {
       setFormData({
+        title: member.title || "Mr",
         firstName: member.firstName || "",
         lastName: member.lastName || "",
         gender: member.gender || "",
@@ -88,43 +76,57 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
         ministry: member.ministry || "",
         profilePhoto: member.profilePhoto || "",
         notes: member.notes || "",
+        accountType: member.accountType || "Member",
       });
       setImagePreview(member.profilePhoto || null);
+      setFamilySearch(member.family || "")
     } else {
-      setFormData({
-        firstName: "",
-        lastName: "",
-        gender: "",
-        dobMonth: "",
-        dobDay: "",
-        phone: "",
-        address: "",
-        dobYear: "",
-        email: "",
-        contactPerson: "",
-        city: "",
-        country: "",
-        familyId: "",
-        occupation: "",
-        maritalStatus: "single",
-        membershipStatus: "visitor",
-        isBaptised: false,
-        baptismDate: "",
-        baptismLocation: "",
-        baptismChurch: "",
-        ministry: "",
-        profilePhoto: "",
-        notes: "",
-      });
+      setFormData(emptyMemberFormValues());
       setImagePreview(null);
+      setFamilySearch("")
     }
   }, [member, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadFamilies = async () => {
+      try {
+        const response = await (api.families.getAll({ per_page: "100" }) as Promise<{
+          data: {
+            data: Array<{ id: string; name: string }>
+          }
+        }>)
+
+        setFamilies(response.data.data.map((family) => ({
+          id: family.id,
+          name: family.name,
+        })))
+      } catch (error) {
+        console.error("[v0] Failed to load families:", error)
+      }
+    }
+
+    if (isOpen) {
+      void loadFamilies()
+    }
+  }, [isOpen])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log("Form submitted:", formData);
-    onClose();
+
+    try {
+      const response = await onSave(formData, member?.id)
+      toast({
+        title: member ? "Member updated" : "Member created",
+        description: response.message,
+      })
+      onClose();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: member ? "Update failed" : "Creation failed",
+        description: error instanceof Error ? error.message : "Unable to save member.",
+      })
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,6 +140,8 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
       reader.readAsDataURL(file);
     }
   };
+
+  const familyOptionsId = "family-options"
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -220,6 +224,26 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
+                    <Label htmlFor="title">
+                      Title <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
+                      value={formData.title}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, title: value as MemberFormValues["title"] })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select title" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MEMBER_TITLE_OPTIONS.map((title) => (
+                          <SelectItem key={title} value={title}>{title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="gender">
                       Gender <span className="text-destructive">*</span>
                     </Label>
@@ -243,7 +267,7 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                     <Select
                       value={formData.maritalStatus}
                       onValueChange={(value) =>
-                        setFormData({ ...formData, maritalStatus: value })
+                        setFormData({ ...formData, maritalStatus: value as MemberFormValues["maritalStatus"] })
                       }
                     >
                       <SelectTrigger>
@@ -413,15 +437,31 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="familyId">Family ID (Optional)</Label>
+                  <Label htmlFor="familyId">Family (Optional)</Label>
                   <Input
                     id="familyId"
-                    value={formData.familyId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, familyId: e.target.value })
-                    }
-                    placeholder="Link to family records"
+                    list={familyOptionsId}
+                    value={familySearch}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      const matchedFamily = families.find((family) => family.name === value)
+
+                      setFamilySearch(value)
+                      setFormData({
+                        ...formData,
+                        familyId: matchedFamily?.id || "",
+                      })
+                    }}
+                    placeholder="Search family name"
                   />
+                  <datalist id={familyOptionsId}>
+                    {families.map((family) => (
+                      <option key={family.id} value={family.name} />
+                    ))}
+                  </datalist>
+                  <p className="text-xs text-muted-foreground">
+                    Search by family name and select a matching family.
+                  </p>
                 </div>
               </div>
             </div>
@@ -440,7 +480,7 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                   <Select
                     value={formData.membershipStatus}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, membershipStatus: value })
+                      setFormData({ ...formData, membershipStatus: value as MemberFormValues["membershipStatus"] })
                     }
                   >
                     <SelectTrigger>
@@ -450,6 +490,27 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
                       <SelectItem value="visitor">Visitor</SelectItem>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="accountType">
+                    Account Type <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={formData.accountType}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, accountType: value as MemberFormValues["accountType"] })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MEMBER_ACCOUNT_TYPE_OPTIONS.map((accountType) => (
+                        <SelectItem key={accountType} value={accountType}>{accountType}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -572,8 +633,8 @@ export function MemberModal({ isOpen, onClose, member }: MemberModalProps) {
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">
-              {member ? "Update Member" : "Add Member"}
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : member ? "Update Member" : "Add Member"}
             </Button>
           </DialogFooter>
         </form>

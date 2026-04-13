@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { TitheModal } from "./tithe-modal"
 import { MemberDetailsModal } from "./member-details-modal"
 import { useState } from "react"
+import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 
 interface Member {
   id: string
@@ -16,7 +17,7 @@ interface Member {
   email: string
   phone: string
   status: "active" | "inactive" | "visitor"
-  joinDate: string
+  dateOfBirthShort?: string
   family?: string
   ministry?: string
   avatar?: string
@@ -41,9 +42,25 @@ interface MembersTableProps {
   members: Member[]
   loading: boolean
   onEditMember: (member: Member) => void
+  currentPage: number
+  lastPage: number
+  total: number
+  from: number
+  to: number
+  onPageChange: (page: number) => void
 }
 
-export function MembersTable({ members, loading, onEditMember }: MembersTableProps) {
+export function MembersTable({
+  members,
+  loading,
+  onEditMember,
+  currentPage,
+  lastPage,
+  total,
+  from,
+  to,
+  onPageChange,
+}: MembersTableProps) {
   const [isTitheModalOpen, setIsTitheModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
@@ -66,15 +83,15 @@ export function MembersTable({ members, loading, onEditMember }: MembersTablePro
     <div className="rounded-md border">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Member</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Join Date</TableHead>
-            <TableHead>Family</TableHead>
-            <TableHead>Ministry</TableHead>
-            <TableHead className="w-[70px]">Actions</TableHead>
-          </TableRow>
+            <TableRow>
+              <TableHead>Member</TableHead>
+              <TableHead>Contact</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Date of Birth</TableHead>
+              <TableHead>Family</TableHead>
+              <TableHead>Ministry</TableHead>
+              <TableHead className="w-[70px]">Actions</TableHead>
+            </TableRow>
         </TableHeader>
         <TableBody>
           {members.map((member) => (
@@ -96,10 +113,7 @@ export function MembersTable({ members, loading, onEditMember }: MembersTablePro
                 </div>
               </TableCell>
               <TableCell>
-                <div className="space-y-1">
-                  <div className="text-sm">{member.email}</div>
-                  <div className="text-sm text-muted-foreground">{member.phone}</div>
-                </div>
+                <div className="text-sm text-muted-foreground">{member.phone || "-"}</div>
               </TableCell>
               <TableCell>
                 <Badge
@@ -110,7 +124,7 @@ export function MembersTable({ members, loading, onEditMember }: MembersTablePro
                   {member.status}
                 </Badge>
               </TableCell>
-              <TableCell>{member.joinDate}</TableCell>
+              <TableCell>{member.dateOfBirthShort || "-"}</TableCell>
               <TableCell>{member.family || "-"}</TableCell>
               <TableCell>{member.ministry || "-"}</TableCell>
               <TableCell>
@@ -140,6 +154,45 @@ export function MembersTable({ members, loading, onEditMember }: MembersTablePro
           ))}
         </TableBody>
       </Table>
+
+      <div className="flex items-center justify-between border-t px-4 py-3">
+        <p className="text-sm text-muted-foreground">
+          {total > 0 ? `Showing ${from} to ${to} of ${total} members` : "No members found"}
+        </p>
+        <Pagination className="mx-0 w-auto justify-end">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(event) => {
+                  event.preventDefault()
+                  if (currentPage > 1) {
+                    onPageChange(currentPage - 1)
+                  }
+                }}
+                className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-3 text-sm text-muted-foreground">
+                Page {currentPage} of {lastPage}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(event) => {
+                  event.preventDefault()
+                  if (currentPage < lastPage) {
+                    onPageChange(currentPage + 1)
+                  }
+                }}
+                className={currentPage >= lastPage ? "pointer-events-none opacity-50" : ""}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
 
       {/* Tithe Modal */}
       <TitheModal

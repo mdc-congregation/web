@@ -2,6 +2,7 @@
 
 export interface MemberApiRecord {
   id: string
+  title?: string | null
   first_name: string
   last_name: string
   gender: string
@@ -14,7 +15,15 @@ export interface MemberApiRecord {
   contact_person?: string | null
   city?: string | null
   country?: string | null
-  family_id?: string | null
+  families?: Array<{
+    id: string
+    family_name?: string | null
+    name?: string | null
+  }>
+  groups?: Array<{
+    id: string
+    name?: string | null
+  }>
   occupation?: string | null
   marital_status?: 'single' | 'married' | 'divorced' | 'widowed' | null
   membership_status?: 'active' | 'inactive' | 'visitor' | null
@@ -25,11 +34,32 @@ export interface MemberApiRecord {
   baptism_church?: string | null
   profile_photo?: string | null
   notes?: string | null
+  account_type?: 'Member' | 'Guest' | 'Pastor' | 'Guest Pastor' | null
   created_at?: string
   updated_at?: string
 }
 
+export const MEMBER_TITLE_OPTIONS = [
+  "Mr",
+  "Mrs",
+  "Miss",
+  "Dr",
+  "Rev",
+  "Pastor",
+  "Prophet",
+  "Apostle",
+  "Bishop",
+] as const
+
+export const MEMBER_ACCOUNT_TYPE_OPTIONS = [
+  "Member",
+  "Guest",
+  "Pastor",
+  "Guest Pastor",
+] as const
+
 export interface MemberFormValues {
+  title: (typeof MEMBER_TITLE_OPTIONS)[number]
   firstName: string
   lastName: string
   gender: string
@@ -53,6 +83,7 @@ export interface MemberFormValues {
   baptismChurch: string
   profilePhoto: string
   notes: string
+  accountType: (typeof MEMBER_ACCOUNT_TYPE_OPTIONS)[number]
 }
 
 export interface Member extends MemberFormValues {
@@ -63,9 +94,11 @@ export interface Member extends MemberFormValues {
   family?: string
   avatar?: string
   dateOfBirth?: string
+  dateOfBirthShort?: string
 }
 
 export const emptyMemberFormValues = (): MemberFormValues => ({
+  title: 'Mr',
   firstName: '',
   lastName: '',
   gender: '',
@@ -89,15 +122,19 @@ export const emptyMemberFormValues = (): MemberFormValues => ({
   baptismChurch: '',
   profilePhoto: '',
   notes: '',
+  accountType: 'Member',
 })
 
 export const normalizeMember = (member: MemberApiRecord): Member => {
   const firstName = member.first_name ?? ''
   const lastName = member.last_name ?? ''
   const dobParts = [member.dob_month, member.dob_day, member.dob_year].filter(Boolean)
+  const primaryFamily = member.families?.[0]
+  const familyName = primaryFamily?.family_name ?? primaryFamily?.name ?? ''
 
   return {
     id: member.id,
+    title: (member.title as Member["title"]) ?? 'Mr',
     firstName,
     lastName,
     name: [firstName, lastName].filter(Boolean).join(' ').trim(),
@@ -106,14 +143,15 @@ export const normalizeMember = (member: MemberApiRecord): Member => {
     dobDay: member.dob_day ?? '',
     dobYear: member.dob_year ?? '',
     dateOfBirth: dobParts.length > 0 ? dobParts.join(' ') : undefined,
+    dateOfBirthShort: [member.dob_day, member.dob_month].filter(Boolean).join(' '),
     phone: member.phone ?? '',
     address: member.address ?? '',
     email: member.email ?? '',
     contactPerson: member.contact_person ?? '',
     city: member.city ?? '',
     country: member.country ?? '',
-    familyId: member.family_id ?? '',
-    family: member.family_id ?? undefined,
+    familyId: primaryFamily?.id ?? '',
+    family: familyName || undefined,
     occupation: member.occupation ?? '',
     maritalStatus: member.marital_status ?? 'single',
     membershipStatus: member.membership_status ?? 'visitor',
@@ -127,10 +165,12 @@ export const normalizeMember = (member: MemberApiRecord): Member => {
     avatar: member.profile_photo ?? '/placeholder.svg',
     notes: member.notes ?? '',
     joinDate: member.created_at ?? '',
+    accountType: (member.account_type as Member["accountType"]) ?? 'Member',
   }
 }
 
 export const serializeMemberForm = (form: MemberFormValues) => ({
+  title: form.title.trim(),
   first_name: form.firstName.trim(),
   last_name: form.lastName.trim(),
   gender: form.gender,
@@ -143,7 +183,7 @@ export const serializeMemberForm = (form: MemberFormValues) => ({
   contact_person: form.contactPerson.trim() || null,
   city: form.city.trim() || null,
   country: form.country.trim() || null,
-  family_id: form.familyId.trim() || null,
+  family_ids: form.familyId.trim() ? [form.familyId.trim()] : [],
   occupation: form.occupation.trim() || null,
   marital_status: form.maritalStatus,
   membership_status: form.membershipStatus,
@@ -154,4 +194,5 @@ export const serializeMemberForm = (form: MemberFormValues) => ({
   baptism_church: form.baptismChurch.trim() || null,
   profile_photo: form.profilePhoto || null,
   notes: form.notes.trim() || null,
+  account_type: form.accountType,
 })

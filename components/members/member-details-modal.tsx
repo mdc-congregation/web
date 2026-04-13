@@ -63,16 +63,16 @@ export function MemberDetailsModal({ isOpen, onClose, member }: MemberDetailsMod
                       <div className="flex items-center gap-2">
                         <CalendarDays className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">Date of Birth:</span>
-                        <span>{member.dateOfBirth ? formatDate(member.dateOfBirth) : "Not specified"}</span>
+                        <span>{member.dateOfBirth || "Not specified"}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <Award className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">Baptism Status:</span>
-                        <span>{member.isBaptized ? "Baptized" : "Not baptized"}</span>
+                        <span>{member.isBaptised ? "Baptized" : "Not baptized"}</span>
                       </div>
 
-                      {member.isBaptized && (
+                      {member.isBaptised && (
                         <>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
