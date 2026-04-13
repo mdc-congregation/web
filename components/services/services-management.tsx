@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,17 +13,58 @@ import { useServices } from "@/hooks/use-services"
 import { AttendanceModal } from "./attendance-modal"
 import { ServiceNotificationModal } from "./service-notification-modal"
 import { ServiceDetailsModal } from "./service-details-modal"
+import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export function ServicesManagement() {
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false)
   const [selectedService, setSelectedService] = useState(null)
-  const { services, attendance, loading } = useServices()
+  const {
+    services,
+    attendance,
+    stats,
+    pagination,
+    memberOptions,
+    loading,
+    isSaving,
+    error,
+    saveService,
+    updateAttendance,
+    sendNotification,
+    deleteService,
+  } = useServices(debouncedSearchTerm, page, perPage)
 
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedServiceForAction, setSelectedServiceForAction] = useState(null)
+  const [servicePendingDelete, setServicePendingDelete] = useState<any | null>(null)
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim())
+    }, 300)
+
+    return () => window.clearTimeout(timeout)
+  }, [searchTerm])
+
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearchTerm, perPage])
 
   const handleAddService = () => {
     setSelectedService(null)
@@ -50,11 +91,26 @@ export function ServicesManagement() {
     setIsDetailsModalOpen(true)
   }
 
-  const filteredServices = services.filter(
-    (service) =>
-      service.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.preacher.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const handleDeleteService = async () => {
+    if (!servicePendingDelete) {
+      return
+    }
+
+    try {
+      const message = await deleteService(servicePendingDelete.id)
+      toast({
+        title: "Service deleted",
+        description: message,
+      })
+      setServicePendingDelete(null)
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: err instanceof Error ? err.message : "Unable to delete service.",
+      })
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -69,6 +125,12 @@ export function ServicesManagement() {
         </Button>
       </div>
 
+      {error && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -77,9 +139,9 @@ export function ServicesManagement() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4</div>
+            <div className="text-2xl font-bold">{stats?.scheduled_services.count ?? 0}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+1</span> from last week
+              {stats ? `${stats.scheduled_services.percentage_of_total}% of total services` : "Loading..."}
             </p>
           </CardContent>
         </Card>
@@ -89,9 +151,9 @@ export function ServicesManagement() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">892</div>
+            <div className="text-2xl font-bold">{stats?.attendance_this_week.count ?? 0}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+5%</span> from last month
+              {stats ? `${stats.attendance_this_week.percentage_increase}% from comparison period` : "Loading..."}
             </p>
           </CardContent>
         </Card>
@@ -101,8 +163,10 @@ export function ServicesManagement() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">156</div>
-            <p className="text-xs text-muted-foreground">This year</p>
+            <div className="text-2xl font-bold">{stats?.total_services.count ?? 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats ? `${stats.total_services.percentage_increase}% growth` : "Loading..."}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -111,8 +175,8 @@ export function ServicesManagement() {
             <MapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">Next 30 days</p>
+            <div className="text-2xl font-bold">{stats?.upcoming_services ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Scheduled and ongoing</p>
           </CardContent>
         </Card>
       </div>
@@ -134,6 +198,16 @@ export function ServicesManagement() {
                 className="pl-8"
               />
             </div>
+            <select
+              value={String(perPage)}
+              onChange={(event) => setPerPage(Number(event.target.value))}
+              className="h-10 rounded-md border bg-background px-3 text-sm"
+            >
+              <option value="10">10 rows</option>
+              <option value="20">20 rows</option>
+              <option value="50">50 rows</option>
+              <option value="100">100 rows</option>
+            </select>
             <Button variant="outline">
               <Filter className="mr-2 h-4 w-4" />
               Filter
@@ -151,12 +225,19 @@ export function ServicesManagement() {
             </TabsList>
             <TabsContent value="services" className="mt-6">
               <ServicesTable
-                services={filteredServices}
+                services={services}
                 loading={loading}
                 onEditService={handleEditService}
                 onRecordAttendance={handleRecordAttendance}
                 onSendNotification={handleSendNotification}
                 onViewDetails={handleViewDetails}
+                onDeleteService={setServicePendingDelete}
+                currentPage={pagination.currentPage}
+                lastPage={pagination.lastPage}
+                total={pagination.total}
+                from={pagination.from}
+                to={pagination.to}
+                onPageChange={setPage}
               />
             </TabsContent>
             <TabsContent value="attendance" className="mt-6">
@@ -170,18 +251,25 @@ export function ServicesManagement() {
         isOpen={isServiceModalOpen}
         onClose={() => setIsServiceModalOpen(false)}
         service={selectedService}
+        memberOptions={memberOptions}
+        onSave={saveService}
+        isSaving={isSaving}
       />
 
       <AttendanceModal
         isOpen={isAttendanceModalOpen}
         onClose={() => setIsAttendanceModalOpen(false)}
         service={selectedServiceForAction}
+        onSave={updateAttendance}
+        isSaving={isSaving}
       />
 
       <ServiceNotificationModal
         isOpen={isNotificationModalOpen}
         onClose={() => setIsNotificationModalOpen(false)}
         service={selectedServiceForAction}
+        onSend={sendNotification}
+        isSaving={isSaving}
       />
 
       <ServiceDetailsModal
@@ -189,6 +277,23 @@ export function ServicesManagement() {
         onClose={() => setIsDetailsModalOpen(false)}
         service={selectedServiceForAction}
       />
+
+      <AlertDialog open={Boolean(servicePendingDelete)} onOpenChange={(open) => !open && setServicePendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Service</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete <span className="font-medium text-foreground">{servicePendingDelete?.title}</span>. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSaving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleDeleteService()} disabled={isSaving}>
+              {isSaving ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

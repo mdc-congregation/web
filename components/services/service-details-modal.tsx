@@ -65,17 +65,17 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Date:</span>
-                  <span>{service.date}</span>
+                  <span>{service.date || "-"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Time:</span>
-                  <span>{service.time}</span>
+                  <span>{service.time || "-"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Location:</span>
-                  <span>{service.location}</span>
+                  <span>{service.location || "-"}</span>
                 </div>
               </div>
               <div className="space-y-2">
@@ -94,7 +94,7 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Expected Attendance:</span>
-                  <span>{service.expectedAttendance}</span>
+                  <span>{service.expectedAttendance || "-"}</span>
                 </div>
                 {service.actualAttendance && (
                   <div className="flex items-center gap-2">
@@ -115,29 +115,29 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
             <div className="space-y-3">
               <div>
                 <span className="font-medium">Preacher:</span>
-                <span className="ml-2">{service.preacher}</span>
+                <span className="ml-2">{service.preacher || "-"}</span>
               </div>
               <div>
                 <span className="font-medium">Chairman:</span>
-                <span className="ml-2">{service.chairman}</span>
+                <span className="ml-2">{service.chairman || "-"}</span>
               </div>
               {service.supporters && service.supporters.length > 0 && (
                 <div>
                   <span className="font-medium">Supporters:</span>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {service.supporters.map((supporter: string, index: number) => (
+                    {service.supporters.map((supporter: { memberId: string; name: string; role: string }, index: number) => (
                       <Badge key={index} variant="secondary">
-                        {supporter}
+                        {supporter.name} ({supporter.role})
                       </Badge>
                     ))}
                   </div>
                 </div>
               )}
-              {service.specialGuests && service.specialGuests.length > 0 && (
+              {service.specialGuestNames && service.specialGuestNames.length > 0 && (
                 <div>
                   <span className="font-medium">Special Guests:</span>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {service.specialGuests.map((guest: string, index: number) => (
+                    {service.specialGuestNames.map((guest: string, index: number) => (
                       <Badge key={index} variant="outline">
                         {guest}
                       </Badge>

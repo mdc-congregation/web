@@ -15,28 +15,22 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
 
 interface ServiceNotificationModalProps {
   isOpen: boolean
   onClose: () => void
   service?: any
+  onSend: (serviceId: string, announcementMessage: string) => Promise<string>
+  isSaving: boolean
 }
 
-export function ServiceNotificationModal({ isOpen, onClose, service }: ServiceNotificationModalProps) {
+export function ServiceNotificationModal({ isOpen, onClose, service, onSend, isSaving }: ServiceNotificationModalProps) {
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     message: "",
     messageType: "reminder",
-    selectedGroups: [] as string[],
   })
-
-  const [availableGroups] = useState([
-    { id: "all_members", name: "All Members" },
-    { id: "worship_team", name: "Worship Team" },
-    { id: "youth_group", name: "Youth Group" },
-    { id: "prayer_group", name: "Prayer Group" },
-  ])
 
   useEffect(() => {
     if (service) {
@@ -47,25 +41,27 @@ export function ServiceNotificationModal({ isOpen, onClose, service }: ServiceNo
       setFormData({
         message: defaultMessage,
         messageType: "reminder",
-        selectedGroups: ["all_members"],
       })
     }
   }, [service])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log("Notification sent:", formData)
-    onClose()
-  }
-
-  const handleGroupToggle = (groupId: string) => {
-    setFormData({
-      ...formData,
-      selectedGroups: formData.selectedGroups.includes(groupId)
-        ? formData.selectedGroups.filter((id) => id !== groupId)
-        : [...formData.selectedGroups, groupId],
-    })
+    if (!service) return
+    try {
+      const message = await onSend(service.id, formData.message)
+      toast({
+        title: "Notification updated",
+        description: message,
+      })
+      onClose()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Send failed",
+        description: error instanceof Error ? error.message : "Unable to update service notification.",
+      })
+    }
   }
 
   const getMessageTemplate = (type: string) => {
@@ -98,7 +94,7 @@ export function ServiceNotificationModal({ isOpen, onClose, service }: ServiceNo
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Send Service Notification</DialogTitle>
-          <DialogDescription>Send SMS notification to members about this service</DialogDescription>
+          <DialogDescription>Save the announcement message that the API prepares for service supporters.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -148,42 +144,15 @@ export function ServiceNotificationModal({ isOpen, onClose, service }: ServiceNo
               <p className="text-xs text-muted-foreground">Character count: {formData.message.length}/160</p>
             </div>
 
-            <div className="space-y-3">
-              <Label>Select Recipients</Label>
-              <div className="space-y-2">
-                {availableGroups.map((group) => (
-                  <div key={group.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={group.id}
-                      checked={formData.selectedGroups.includes(group.id)}
-                      onCheckedChange={() => handleGroupToggle(group.id)}
-                    />
-                    <label
-                      htmlFor={group.id}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {group.name}
-                    </label>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.selectedGroups.map((groupId) => {
-                  const group = availableGroups.find((g) => g.id === groupId)
-                  return (
-                    <Badge key={groupId} variant="secondary">
-                      {group?.name}
-                    </Badge>
-                  )
-                })}
-              </div>
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+              This endpoint targets supporters linked to the service who have phone numbers on file.
             </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit">Send SMS</Button>
+              <Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save Message"}</Button>
             </DialogFooter>
           </form>
         </div>
