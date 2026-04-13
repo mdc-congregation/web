@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CalendarDays, Mail, Phone, Home, Users, Church, Award, Calendar } from "lucide-react"
+import { CalendarDays, Mail, Phone, Home, Users, Church, Award, Calendar, Briefcase, UserCircle2 } from "lucide-react"
 import { formatDate } from "@/utils/date-helpers"
 
 interface MemberDetailsModalProps {
@@ -46,11 +46,10 @@ export function MemberDetailsModal({ isOpen, onClose, member }: MemberDetailsMod
 
           <div className="flex-1">
             <Tabs defaultValue="personal" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="personal">Personal</TabsTrigger>
                 <TabsTrigger value="contact">Contact</TabsTrigger>
                 <TabsTrigger value="church">Church</TabsTrigger>
-                <TabsTrigger value="contributions">Contributions</TabsTrigger>
               </TabsList>
 
               <TabsContent value="personal" className="space-y-4 mt-4">
@@ -67,9 +66,27 @@ export function MemberDetailsModal({ isOpen, onClose, member }: MemberDetailsMod
                       </div>
 
                       <div className="flex items-center gap-2">
+                        <UserCircle2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Title:</span>
+                        <span>{member.title || "Not specified"}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
                         <Award className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">Baptism Status:</span>
                         <span>{member.isBaptised ? "Baptized" : "Not baptized"}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Occupation:</span>
+                        <span>{member.occupation || "Not specified"}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Account Type:</span>
+                        <span>{member.accountType || "Not specified"}</span>
                       </div>
 
                       {member.isBaptised && (
@@ -118,8 +135,18 @@ export function MemberDetailsModal({ isOpen, onClose, member }: MemberDetailsMod
 
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Family:</span>
-                      <span>{member.family || "Not specified"}</span>
+                      <span className="font-medium">Emergency Contact:</span>
+                      <span>{member.contactPerson || "Not specified"}</span>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground mt-1" />
+                      <span className="font-medium">Families:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {member.families?.length ? member.families.map((family: { id: string; name: string }) => (
+                          <Badge key={family.id} variant="outline">{family.name}</Badge>
+                        )) : <span>Not linked</span>}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -143,6 +170,16 @@ export function MemberDetailsModal({ isOpen, onClose, member }: MemberDetailsMod
                         <span className="font-medium">Ministry:</span>
                         <span>{member.ministry || "Not assigned"}</span>
                       </div>
+
+                      <div className="flex items-start gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground mt-1" />
+                        <span className="font-medium">Groups:</span>
+                        <div className="flex flex-wrap gap-2">
+                          {member.groups?.length ? member.groups.map((group: { id: string; name: string }) => (
+                            <Badge key={group.id} variant="secondary">{group.name}</Badge>
+                          )) : <span>Not assigned</span>}
+                        </div>
+                      </div>
                     </div>
 
                     {member.notes && (
@@ -150,52 +187,6 @@ export function MemberDetailsModal({ isOpen, onClose, member }: MemberDetailsMod
                         <h4 className="font-medium mb-2">Notes:</h4>
                         <p className="text-sm text-muted-foreground">{member.notes}</p>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="contributions" className="space-y-4 mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Tithes & Contributions</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {member.contributions && member.contributions.length > 0 ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="bg-muted/50 p-4 rounded-lg">
-                            <p className="text-sm text-muted-foreground">Total This Year</p>
-                            <p className="text-2xl font-bold">${member.yearlyTotal || "0.00"}</p>
-                          </div>
-                          <div className="bg-muted/50 p-4 rounded-lg">
-                            <p className="text-sm text-muted-foreground">Last Contribution</p>
-                            <p className="text-2xl font-bold">${member.lastContribution?.amount || "0.00"}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {member.lastContribution?.date ? formatDate(member.lastContribution.date) : "N/A"}
-                            </p>
-                          </div>
-                          <div className="bg-muted/50 p-4 rounded-lg">
-                            <p className="text-sm text-muted-foreground">Monthly Average</p>
-                            <p className="text-2xl font-bold">${member.monthlyAverage || "0.00"}</p>
-                          </div>
-                        </div>
-
-                        <h4 className="font-medium mt-6 mb-2">Recent Contributions</h4>
-                        <div className="space-y-2">
-                          {member.contributions.map((contribution: any, index: number) => (
-                            <div key={index} className="flex justify-between items-center border-b pb-2">
-                              <div>
-                                <p className="font-medium">${contribution.amount}</p>
-                                <p className="text-xs text-muted-foreground">{formatDate(contribution.date)}</p>
-                              </div>
-                              <Badge variant="outline">{contribution.type}</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">No contribution records found</div>
                     )}
                   </CardContent>
                 </Card>

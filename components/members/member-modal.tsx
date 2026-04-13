@@ -25,6 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { api } from "@/utils/api-client";
+import { getAuthUser } from "@/utils/auth";
 import {
   emptyMemberFormValues,
   MEMBER_ACCOUNT_TYPE_OPTIONS,
@@ -46,8 +47,8 @@ export function MemberModal({ isOpen, onClose, member, onSave, isSaving }: Membe
   const [formData, setFormData] = useState<MemberFormValues>(emptyMemberFormValues());
   const [families, setFamilies] = useState<Array<{ id: string; name: string }>>([])
   const [familySearch, setFamilySearch] = useState("")
-
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   useEffect(() => {
     if (member) {
@@ -129,15 +130,49 @@ export function MemberModal({ isOpen, onClose, member, onSave, isSaving }: Membe
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-        setFormData({ ...formData, profilePhoto: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      const previewUrl = URL.createObjectURL(file)
+      setImagePreview(previewUrl)
+
+      try {
+        setIsUploadingImage(true)
+        const authUser = getAuthUser()
+        const response = await (api.uploads.file(file, {
+          upload_type: "profile",
+          user_id: authUser?.id ?? "",
+        }) as Promise<{
+          data?: {
+            url?: string
+          }
+          message?: string
+        }>)
+
+        if (!response.data?.url) {
+          throw new Error("Image upload did not return a file URL.")
+        }
+
+        setFormData((current) => ({
+          ...current,
+          profilePhoto: response.data?.url ?? current.profilePhoto,
+        }))
+        setImagePreview(response.data.url)
+        toast({
+          title: "Image uploaded",
+          description: response.message ?? "Profile image uploaded successfully.",
+        })
+      } catch (error) {
+        setImagePreview(formData.profilePhoto || member?.profilePhoto || null)
+        toast({
+          variant: "destructive",
+          title: "Upload failed",
+          description: error instanceof Error ? error.message : "Unable to upload image.",
+        })
+      } finally {
+        setIsUploadingImage(false)
+        e.target.value = ""
+      }
     }
   };
 
@@ -180,11 +215,12 @@ export function MemberModal({ isOpen, onClose, member, onSave, isSaving }: Membe
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={handleImageChange}
+                  onChange={(event) => void handleImageChange(event)}
                 />
               </div>
             </div>
           </div>
+          {isUploadingImage && <p className="mb-4 text-center text-sm text-muted-foreground">Uploading image...</p>}
 
           <div className="space-y-6">
             {/* Required Fields Section */}

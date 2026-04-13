@@ -4,9 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { MoreHorizontal, Edit, Eye, DollarSign } from "lucide-react"
+import { MoreHorizontal, Edit, Eye } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { TitheModal } from "./tithe-modal"
 import { MemberDetailsModal } from "./member-details-modal"
 import { useState } from "react"
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
@@ -29,13 +28,8 @@ interface Member {
   isBaptized?: boolean
   baptismDate?: string
   baptismLocation?: string
-  contributions?: any[]
-  yearlyTotal?: string
-  monthlyAverage?: string
-  lastContribution?: {
-    amount: string
-    date: string
-  }
+  families?: Array<{ id: string; name: string }>
+  groups?: Array<{ id: string; name: string }>
 }
 
 interface MembersTableProps {
@@ -61,14 +55,8 @@ export function MembersTable({
   to,
   onPageChange,
 }: MembersTableProps) {
-  const [isTitheModalOpen, setIsTitheModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
-
-  const handleAddTithe = (member: Member) => {
-    setSelectedMember(member)
-    setIsTitheModalOpen(true)
-  }
 
   const handleViewDetails = (member: Member) => {
     setSelectedMember(member)
@@ -143,10 +131,6 @@ export function MembersTable({
                       <Edit className="mr-2 h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleAddTithe(member)}>
-                      <DollarSign className="mr-2 h-4 w-4" />
-                      Add Tithe
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
@@ -193,17 +177,6 @@ export function MembersTable({
           </PaginationContent>
         </Pagination>
       </div>
-
-      {/* Tithe Modal */}
-      <TitheModal
-        isOpen={isTitheModalOpen}
-        onClose={() => {
-          setIsTitheModalOpen(false)
-          setSelectedMember(null)
-        }}
-        member={selectedMember}
-      />
-
       {/* Member Details Modal */}
       <MemberDetailsModal
         isOpen={isDetailsModalOpen}
