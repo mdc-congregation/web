@@ -172,6 +172,7 @@ export const api = {
   // Members
   members: {
     getAll: (params?: Record<string, string>) => apiClient.get("/member", params),
+    getOptions: (params?: Record<string, string>) => apiClient.get("/member/options", params),
     getById: (id: string) => apiClient.get(`/member/${id}`),
     create: (data: any) => apiClient.post("/member/save", data),
     update: (id: string, data: any) => apiClient.put(`/member/${id}`, data),

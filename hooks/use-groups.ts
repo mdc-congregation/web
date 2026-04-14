@@ -46,10 +46,6 @@ type MemberOption = {
   phone?: string | null
 }
 
-type MembersPayload = {
-  data: MemberOption[]
-}
-
 export function useGroups(searchTerm: string, groupType: string, page: number, perPage: number) {
   const [groups, setGroups] = useState<GroupView[]>([])
   const [loading, setLoading] = useState(true)
@@ -79,7 +75,7 @@ export function useGroups(searchTerm: string, groupType: string, page: number, p
           ...(groupType && groupType !== "all" ? { group_type: groupType } : {}),
         }) as Promise<ApiResponse<GroupsListPayload>>,
         api.groups.getStats() as Promise<ApiResponse<GroupStatsPayload>>,
-        api.members.getAll({ per_page: "100" }) as Promise<ApiResponse<MembersPayload>>,
+        api.members.getOptions() as Promise<ApiResponse<MemberOption[]>>,
       ])
 
       setGroups(groupsResponse.data.data.map(normalizeGroup))
@@ -93,7 +89,7 @@ export function useGroups(searchTerm: string, groupType: string, page: number, p
       })
       setStats(statsResponse.data)
       setMemberOptions(
-        membersResponse.data.data.map((member) => ({
+        membersResponse.data.map((member) => ({
           id: member.id,
           name: `${member.first_name} ${member.last_name}`.trim(),
           phone: member.phone,

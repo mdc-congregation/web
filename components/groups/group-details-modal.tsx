@@ -285,7 +285,7 @@ export function GroupDetailsModal({
                       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                         <Command>
                           <CommandInput placeholder="Search members..." />
-                          <CommandList>
+                          <CommandList className="max-h-72 overflow-y-auto">
                             <CommandEmpty>No available members found.</CommandEmpty>
                             <CommandGroup>
                               {availableMembers.map((member) => (
