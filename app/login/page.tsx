@@ -24,8 +24,8 @@ export default function LoginPage() {
                   </svg>
                 </div>
               </div>
-              <h1 className="text-2xl font-bold text-white">Church Portal</h1>
-              <p className="text-blue-100 text-sm">Management System</p>
+              <h1 className="text-2xl font-bold text-white">CONGREGATION</h1>
+              <p className="text-blue-100 text-sm">Church Management System</p>
             </div>
           </div>
 
@@ -37,7 +37,7 @@ export default function LoginPage() {
           {/* Footer Section */}
           <div className="bg-secondary-light/30 px-6 py-4 border-t border-border">
             <p className="text-center text-sm text-muted-foreground">
-              Secure access to your church management dashboard
+              Secure access to your church dashboard
             </p>
           </div>
         </div>

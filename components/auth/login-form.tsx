@@ -129,22 +129,6 @@ export function LoginForm() {
         )}
       </Button>
 
-      {/* Divider */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-border"></div>
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="px-2 bg-background text-muted-foreground">Or continue with</span>
-        </div>
-      </div>
-
-      {/* Help Text */}
-      <div className="space-y-2 text-center text-xs text-muted-foreground">
-        <p>Demo Credentials:</p>
-        <p className="font-mono text-foreground/70">Email: super_admin@freedomtemple.com</p>
-        <p className="font-mono text-foreground/70">Password: password</p>
-      </div>
     </form>
   )
 }
