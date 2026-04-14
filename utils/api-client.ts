@@ -231,8 +231,14 @@ export const api = {
 
   // Communication
   communication: {
+    getStats: () => apiClient.get("/communication/stats"),
+    getEvents: (params?: Record<string, string>) => apiClient.get("/communication/events", params),
+    getEvent: (id: string) => apiClient.get(`/communication/events/${id}`),
+    createEvent: (data: any) => apiClient.post("/communication/events", data),
+    updateEvent: (id: string, data: any) => apiClient.put(`/communication/events/${id}`, data),
+    getMessages: (params?: Record<string, string>) => apiClient.get("/communication/messages", params),
     sendSMS: (data: any) => apiClient.post("/communication/sms", data),
-    sendEmail: (data: any) => apiClient.post("/communication/email", data),
+    getRecipients: (params?: Record<string, string>) => apiClient.get("/communication/recipients", params),
     getTemplates: () => apiClient.get("/communication/templates"),
   },
 

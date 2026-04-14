@@ -3,19 +3,9 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { MoreHorizontal, Edit, Eye, MessageSquare, Mail } from "lucide-react"
+import { MoreHorizontal, Edit, Eye, MessageSquare } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-
-interface CommunicationEvent {
-  id: string
-  title: string
-  description: string
-  createdDate: string
-  status: "active" | "completed" | "draft"
-  messagesSent: number
-  totalRecipients: number
-  type: "announcement" | "reminder" | "invitation" | "newsletter"
-}
+import type { CommunicationEvent } from "@/hooks/use-communication"
 
 interface CommunicationEventsTableProps {
   events: CommunicationEvent[]
@@ -44,7 +34,7 @@ export function CommunicationEventsTable({
         return "secondary"
       case "invitation":
         return "outline"
-      case "newsletter":
+      case "birthday":
         return "destructive"
       default:
         return "outline"
@@ -79,18 +69,25 @@ export function CommunicationEventsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
+          {events.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                No communication events found.
+              </TableCell>
+            </TableRow>
+          )}
           {events.map((event) => (
             <TableRow key={event.id}>
               <TableCell>
                 <div className="space-y-1">
                   <div className="font-medium">{event.title}</div>
-                  <div className="text-sm text-muted-foreground">{event.description}</div>
+                  <div className="text-sm text-muted-foreground">{event.description || "No description provided."}</div>
                 </div>
               </TableCell>
               <TableCell>
-                <Badge variant={getTypeColor(event.type)}>{event.type}</Badge>
+                <Badge variant={getTypeColor(event.type)}>{event.typeLabel}</Badge>
               </TableCell>
-              <TableCell>{event.createdDate}</TableCell>
+              <TableCell>{event.createdDateLabel}</TableCell>
               <TableCell className="font-medium">{event.messagesSent}</TableCell>
               <TableCell>{event.totalRecipients}</TableCell>
               <TableCell>
@@ -115,10 +112,6 @@ export function CommunicationEventsTable({
                     <DropdownMenuItem onClick={() => onSendMessage(event)}>
                       <MessageSquare className="mr-2 h-4 w-4" />
                       Send SMS
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onSendMessage(event)}>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Send Email
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

@@ -2,21 +2,11 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { MessageSquare, Mail, Users, User } from "lucide-react"
-
-interface Message {
-  id: string
-  subject: string
-  type: "email" | "sms"
-  recipientType: "group" | "individual"
-  recipientCount: number
-  sentDate: string
-  status: "sent" | "delivered" | "failed" | "pending"
-  eventTitle?: string
-}
+import { Cake, MessageSquare, Users, User } from "lucide-react"
+import type { CommunicationMessage } from "@/hooks/use-communication"
 
 interface MessagesTableProps {
-  messages: Message[]
+  messages: CommunicationMessage[]
   loading: boolean
 }
 
@@ -29,7 +19,7 @@ export function MessagesTable({ messages, loading }: MessagesTableProps) {
     switch (status) {
       case "sent":
         return "default"
-      case "delivered":
+      case "partial":
         return "secondary"
       case "failed":
         return "destructive"
@@ -54,37 +44,58 @@ export function MessagesTable({ messages, loading }: MessagesTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
+          {messages.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                No SMS history found.
+              </TableCell>
+            </TableRow>
+          )}
           {messages.map((message) => (
             <TableRow key={message.id}>
               <TableCell>
-                <div className="font-medium">{message.subject}</div>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  {message.type === "email" ? (
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <span className="capitalize">{message.type}</span>
+                <div className="space-y-1">
+                  <div className="font-medium">{message.subject}</div>
+                  <div className="line-clamp-2 text-sm text-muted-foreground">{message.content}</div>
                 </div>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  {message.recipientType === "group" ? (
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  <span>SMS</span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  {message.recipientType === "birthday_celebrants" ? (
+                    <Cake className="h-4 w-4 text-muted-foreground" />
+                  ) : message.recipientType === "groups" || message.recipientType === "all_members" ? (
                     <Users className="h-4 w-4 text-muted-foreground" />
                   ) : (
                     <User className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <span>
-                    {message.recipientCount} {message.recipientType === "group" ? "members" : "person"}
-                  </span>
+                  <span>{message.recipientTypeLabel}</span>
                 </div>
+                <div className="mt-1 text-xs text-muted-foreground">{message.recipientCount} recipients</div>
+                {message.personalized && (
+                  <div className="mt-1 text-xs text-muted-foreground">Personalized with name</div>
+                )}
+                {message.includeGuests && (
+                  <div className="mt-1 text-xs text-muted-foreground">Guests included</div>
+                )}
               </TableCell>
               <TableCell>{message.eventTitle || "-"}</TableCell>
-              <TableCell>{message.sentDate}</TableCell>
+              <TableCell>{message.status === "pending" ? message.scheduledForLabel || message.sentDateLabel : message.sentDateLabel}</TableCell>
               <TableCell>
                 <Badge variant={getStatusColor(message.status)}>{message.status}</Badge>
+                {message.failedCount > 0 && (
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {message.successCount} sent, {message.failedCount} failed
+                  </div>
+                )}
+                {message.failedCount === 0 && message.successCount > 0 && (
+                  <div className="mt-1 text-xs text-muted-foreground">{message.successCount} sent successfully</div>
+                )}
               </TableCell>
             </TableRow>
           ))}

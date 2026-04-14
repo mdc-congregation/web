@@ -16,15 +16,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import type { CommunicationEvent, CommunicationEventPayload } from "@/hooks/use-communication"
 
 interface CommunicationEventModalProps {
   isOpen: boolean
   onClose: () => void
-  event?: any
+  event?: CommunicationEvent | null
+  isSaving: boolean
+  onSave: (payload: CommunicationEventPayload, eventId?: string) => Promise<void>
 }
 
-export function CommunicationEventModal({ isOpen, onClose, event }: CommunicationEventModalProps) {
-  const [formData, setFormData] = useState({
+export function CommunicationEventModal({ isOpen, onClose, event, isSaving, onSave }: CommunicationEventModalProps) {
+  const [formData, setFormData] = useState<CommunicationEventPayload>({
     title: "",
     description: "",
     type: "announcement",
@@ -52,11 +55,9 @@ export function CommunicationEventModal({ isOpen, onClose, event }: Communicatio
     }
   }, [event])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log("Communication event submitted:", formData)
-    onClose()
+    await onSave(formData, event?.id)
   }
 
   return (
@@ -97,7 +98,12 @@ export function CommunicationEventModal({ isOpen, onClose, event }: Communicatio
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="type">Event Type</Label>
-                <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, type: value as CommunicationEventPayload["type"] })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -105,13 +111,18 @@ export function CommunicationEventModal({ isOpen, onClose, event }: Communicatio
                     <SelectItem value="announcement">Announcement</SelectItem>
                     <SelectItem value="reminder">Reminder</SelectItem>
                     <SelectItem value="invitation">Invitation</SelectItem>
-                    <SelectItem value="newsletter">Newsletter</SelectItem>
+                    <SelectItem value="birthday">Birthday</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, status: value as CommunicationEventPayload["status"] })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -140,7 +151,7 @@ export function CommunicationEventModal({ isOpen, onClose, event }: Communicatio
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">{event ? "Update Event" : "Create Event"}</Button>
+            <Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : event ? "Update Event" : "Create Event"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

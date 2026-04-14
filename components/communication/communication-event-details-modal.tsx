@@ -1,18 +1,68 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Calendar, MessageSquare, Users, Mail } from "lucide-react"
+import { Calendar, Loader2, MessageSquare, Users } from "lucide-react"
+import type { CommunicationEvent, CommunicationEventDetails } from "@/hooks/use-communication"
 
 interface CommunicationEventDetailsModalProps {
   isOpen: boolean
   onClose: () => void
-  event?: any
+  event?: CommunicationEvent | null
+  getEventDetails: (eventId: string) => Promise<CommunicationEventDetails>
 }
 
-export function CommunicationEventDetailsModal({ isOpen, onClose, event }: CommunicationEventDetailsModalProps) {
-  if (!event) return null
+export function CommunicationEventDetailsModal({
+  isOpen,
+  onClose,
+  event,
+  getEventDetails,
+}: CommunicationEventDetailsModalProps) {
+  const [details, setDetails] = useState<CommunicationEventDetails | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen || !event?.id) {
+      setDetails(null)
+      return
+    }
+
+    let cancelled = false
+
+    const fetchDetails = async () => {
+      try {
+        setLoading(true)
+        setDetails(null)
+        const response = await getEventDetails(event.id)
+
+        if (!cancelled) {
+          setDetails(response)
+        }
+      } catch {
+        if (!cancelled) {
+          setDetails(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void fetchDetails()
+
+    return () => {
+      cancelled = true
+    }
+  }, [event?.id, getEventDetails, isOpen])
+
+  const currentEvent = details ?? event
+
+  if (!currentEvent) {
+    return null
+  }
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -22,7 +72,7 @@ export function CommunicationEventDetailsModal({ isOpen, onClose, event }: Commu
         return "secondary"
       case "invitation":
         return "outline"
-      case "newsletter":
+      case "birthday":
         return "destructive"
       default:
         return "outline"
@@ -44,103 +94,98 @@ export function CommunicationEventDetailsModal({ isOpen, onClose, event }: Commu
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{event.title}</DialogTitle>
-          <DialogDescription>Communication event details and statistics</DialogDescription>
+          <DialogTitle>{currentEvent.title}</DialogTitle>
+          <DialogDescription>Communication event details and SMS history</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Event Information</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+        {loading && !details ? (
+          <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading event details...
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">Created:</span>
-                  <span>{event.createdDate}</span>
+                  <span>{currentEvent.createdDateLabel}</span>
                 </div>
-                <div>
+                <div className="flex items-center gap-2">
                   <span className="font-medium">Type:</span>
-                  <Badge variant={getTypeColor(event.type)} className="ml-2">
-                    {event.type}
-                  </Badge>
+                  <Badge variant={getTypeColor(currentEvent.type)}>{currentEvent.typeLabel}</Badge>
                 </div>
-                <div>
+                <div className="flex items-center gap-2">
                   <span className="font-medium">Status:</span>
-                  <Badge variant={getStatusColor(event.status)} className="ml-2">
-                    {event.status}
-                  </Badge>
+                  <Badge variant={getStatusColor(currentEvent.status)}>{currentEvent.status}</Badge>
                 </div>
               </div>
-              <div className="space-y-2">
+
+              <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Messages Sent:</span>
-                  <span>{event.messagesSent}</span>
+                  <span className="font-medium">Messages sent:</span>
+                  <span>{currentEvent.messagesSent}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Total Recipients:</span>
-                  <span>{event.totalRecipients}</span>
+                  <span className="font-medium">Total recipients:</span>
+                  <span>{currentEvent.totalRecipients}</span>
                 </div>
-                {event.messagesSent > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Delivery Rate:</span>
-                    <span>{Math.round((event.messagesSent / event.totalRecipients) * 100)}%</span>
-                  </div>
-                )}
               </div>
             </div>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          {/* Description */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Description</h3>
-            <p className="text-muted-foreground">{event.description}</p>
-          </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Description</h3>
+              <p className="text-sm text-muted-foreground">{currentEvent.description || "No description provided."}</p>
+            </div>
 
-          {/* Additional Notes */}
-          {event.notes && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Additional Notes</h3>
-                <p className="text-muted-foreground">{event.notes}</p>
-              </div>
-            </>
-          )}
-
-          {/* Message Statistics */}
-          {event.messagesSent > 0 && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Message Statistics</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-muted rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">{event.messagesSent}</div>
-                    <div className="text-sm text-muted-foreground">Sent</div>
-                  </div>
-                  <div className="text-center p-4 bg-muted rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">{Math.round(event.messagesSent * 0.95)}</div>
-                    <div className="text-sm text-muted-foreground">Delivered</div>
-                  </div>
-                  <div className="text-center p-4 bg-muted rounded-lg">
-                    <div className="text-2xl font-bold text-red-600">
-                      {event.messagesSent - Math.round(event.messagesSent * 0.95)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Failed</div>
-                  </div>
+            {currentEvent.notes && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Additional Notes</h3>
+                  <p className="text-sm text-muted-foreground">{currentEvent.notes}</p>
                 </div>
-              </div>
-            </>
-          )}
-        </div>
+              </>
+            )}
+
+            <Separator />
+
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">Message History</h3>
+              {details?.messages.length ? (
+                <div className="space-y-3">
+                  {details.messages.map((message) => (
+                    <div key={message.id} className="rounded-lg border p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1">
+                          <div className="font-medium">{message.subject}</div>
+                          <div className="text-sm text-muted-foreground">{message.content}</div>
+                        </div>
+                        <Badge variant={message.status === "failed" ? "destructive" : message.status === "sent" ? "default" : "outline"}>
+                          {message.status}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-muted-foreground md:grid-cols-3">
+                        <div>{message.recipientTypeLabel}</div>
+                        <div>{message.recipientCount} recipients</div>
+                        <div>{message.sentDateLabel}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No messages have been sent for this event yet.</p>
+              )}
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )

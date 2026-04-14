@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -19,107 +19,221 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, User, X } from "lucide-react"
+import { Calendar, Cake, Loader2, MessageSquare, Search, Users, X } from "lucide-react"
+import type {
+  CommunicationEvent,
+  CommunicationMessagePayload,
+  CommunicationRecipientOptions,
+  CommunicationTemplate,
+} from "@/hooks/use-communication"
 
 interface MessageModalProps {
   isOpen: boolean
   onClose: () => void
-  message?: any
-  event?: any
+  event?: CommunicationEvent | null
+  recipients: CommunicationRecipientOptions
+  templates: CommunicationTemplate[]
+  isSaving: boolean
+  loadRecipients: (options?: { includeGuests?: boolean; weekOffset?: number }) => Promise<CommunicationRecipientOptions>
+  onSend: (payload: CommunicationMessagePayload) => Promise<void>
 }
 
-export function MessageModal({ isOpen, onClose, message, event }: MessageModalProps) {
+const emptyRecipients: CommunicationRecipientOptions = {
+  members: [],
+  groups: [],
+  birthdayCelebrants: [],
+}
+
+export function MessageModal({
+  isOpen,
+  onClose,
+  event,
+  recipients,
+  templates,
+  isSaving,
+  loadRecipients,
+  onSend,
+}: MessageModalProps) {
   const [formData, setFormData] = useState({
     subject: "",
     content: "",
-    type: "email",
-    recipientType: "group",
+    recipientType: "groups" as CommunicationMessagePayload["recipient_scope"],
     selectedGroups: [] as string[],
     selectedMembers: [] as string[],
-    externalContacts: "",
-    scheduledDate: "",
-    scheduledTime: "",
-    priority: "normal",
+    includeGuests: false,
+    personalized: false,
+    birthdayWeekOffset: "0",
+    templateName: "",
   })
-
-  const [availableGroups] = useState([
-    { id: "all_members", name: "All Members" },
-    { id: "worship_team", name: "Worship Team" },
-    { id: "youth_group", name: "Youth Group" },
-    { id: "prayer_group", name: "Prayer Group" },
-    { id: "finance_committee", name: "Finance Committee" },
-  ])
-
-  const [availableMembers] = useState([
-    { id: "1", name: "John Smith", email: "john@example.com" },
-    { id: "2", name: "Sarah Johnson", email: "sarah@example.com" },
-    { id: "3", name: "Michael Chen", email: "michael@example.com" },
-    { id: "4", name: "Emily Davis", email: "emily@example.com" },
-  ])
+  const [memberSearch, setMemberSearch] = useState("")
+  const [groupSearch, setGroupSearch] = useState("")
+  const [availableRecipients, setAvailableRecipients] = useState<CommunicationRecipientOptions>(recipients)
+  const [isLoadingRecipients, setIsLoadingRecipients] = useState(false)
 
   useEffect(() => {
-    if (message) {
-      setFormData({
-        subject: message.subject || "",
-        content: message.content || "",
-        type: message.type || "email",
-        recipientType: message.recipientType || "group",
-        selectedGroups: message.selectedGroups || [],
-        selectedMembers: message.selectedMembers || [],
-        externalContacts: message.externalContacts || "",
-        scheduledDate: message.scheduledDate || "",
-        scheduledTime: message.scheduledTime || "",
-        priority: message.priority || "normal",
-      })
-    } else {
-      setFormData({
-        subject: event ? `${event.title} - ` : "",
-        content: event ? `${event.description}\n\n` : "",
-        type: "email",
-        recipientType: "group",
-        selectedGroups: [],
-        selectedMembers: [],
-        externalContacts: "",
-        scheduledDate: "",
-        scheduledTime: "",
-        priority: "normal",
-      })
+    if (!isOpen) {
+      return
     }
-  }, [message, event])
 
-  const handleSubmit = (e: React.FormEvent) => {
+    setFormData({
+      subject: event?.title ?? "",
+      content: event?.description ?? "",
+      recipientType: event?.type === "birthday" ? "birthday_celebrants" : "groups",
+      selectedGroups: [],
+      selectedMembers: [],
+      includeGuests: false,
+      personalized: event?.type === "birthday",
+      birthdayWeekOffset: "0",
+      templateName: event?.type === "birthday" ? "birthday_wish" : "",
+    })
+    setMemberSearch("")
+    setGroupSearch("")
+    setAvailableRecipients(recipients)
+  }, [event, isOpen, recipients])
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    let cancelled = false
+
+    const fetchRecipients = async () => {
+      try {
+        setIsLoadingRecipients(true)
+        const nextRecipients = await loadRecipients({
+          includeGuests: formData.includeGuests,
+          weekOffset: Number(formData.birthdayWeekOffset),
+        })
+
+        if (!cancelled) {
+          setAvailableRecipients(nextRecipients)
+        }
+      } catch {
+        if (!cancelled) {
+          setAvailableRecipients(emptyRecipients)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingRecipients(false)
+        }
+      }
+    }
+
+    void fetchRecipients()
+
+    return () => {
+      cancelled = true
+    }
+  }, [formData.birthdayWeekOffset, formData.includeGuests, isOpen, loadRecipients])
+
+  const selectedTemplate = useMemo(
+    () => templates.find((template) => template.name === formData.templateName),
+    [formData.templateName, templates],
+  )
+
+  const filteredMembers = useMemo(() => {
+    const query = memberSearch.trim().toLowerCase()
+
+    if (!query) {
+      return availableRecipients.members
+    }
+
+    return availableRecipients.members.filter(
+      (member) => member.name.toLowerCase().includes(query) || member.phone.toLowerCase().includes(query),
+    )
+  }, [availableRecipients.members, memberSearch])
+
+  const filteredGroups = useMemo(() => {
+    const query = groupSearch.trim().toLowerCase()
+
+    if (!query) {
+      return availableRecipients.groups
+    }
+
+    return availableRecipients.groups.filter(
+      (group) => group.name.toLowerCase().includes(query) || group.type.toLowerCase().includes(query),
+    )
+  }, [availableRecipients.groups, groupSearch])
+
+  const recipientCount = useMemo(() => {
+    switch (formData.recipientType) {
+      case "members":
+        return formData.selectedMembers.length
+      case "groups":
+        return availableRecipients.groups
+          .filter((group) => formData.selectedGroups.includes(group.id))
+          .reduce((total, group) => total + group.memberCount, 0)
+      case "all_members":
+        return availableRecipients.members.length
+      case "birthday_celebrants":
+        return availableRecipients.birthdayCelebrants.length
+      default:
+        return 0
+    }
+  }, [availableRecipients, formData.recipientType, formData.selectedGroups, formData.selectedMembers])
+
+  const canSend =
+    formData.content.trim().length > 0 &&
+    (formData.recipientType !== "members" || formData.selectedMembers.length > 0) &&
+    (formData.recipientType !== "groups" || formData.selectedGroups.length > 0)
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log("Message submitted:", formData)
-    onClose()
+
+    if (!canSend) {
+      return
+    }
+
+    await onSend({
+      communication_event_id: event?.id,
+      subject: formData.subject.trim() || undefined,
+      content: formData.content.trim(),
+      recipient_scope: formData.recipientType,
+      member_ids: formData.recipientType === "members" ? formData.selectedMembers : undefined,
+      group_ids: formData.recipientType === "groups" ? formData.selectedGroups : undefined,
+      include_guests: formData.includeGuests,
+      personalized: formData.personalized,
+      birthday_week_offset: formData.recipientType === "birthday_celebrants" ? Number(formData.birthdayWeekOffset) : undefined,
+    })
   }
 
   const handleGroupToggle = (groupId: string) => {
-    setFormData({
-      ...formData,
-      selectedGroups: formData.selectedGroups.includes(groupId)
-        ? formData.selectedGroups.filter((id) => id !== groupId)
-        : [...formData.selectedGroups, groupId],
-    })
+    setFormData((current) => ({
+      ...current,
+      selectedGroups: current.selectedGroups.includes(groupId)
+        ? current.selectedGroups.filter((id) => id !== groupId)
+        : [...current.selectedGroups, groupId],
+    }))
   }
 
   const handleMemberToggle = (memberId: string) => {
-    setFormData({
-      ...formData,
-      selectedMembers: formData.selectedMembers.includes(memberId)
-        ? formData.selectedMembers.filter((id) => id !== memberId)
-        : [...formData.selectedMembers, memberId],
-    })
+    setFormData((current) => ({
+      ...current,
+      selectedMembers: current.selectedMembers.includes(memberId)
+        ? current.selectedMembers.filter((id) => id !== memberId)
+        : [...current.selectedMembers, memberId],
+    }))
+  }
+
+  const applyTemplate = (templateName: string) => {
+    const template = templates.find((item) => item.name === templateName)
+    setFormData((current) => ({
+      ...current,
+      templateName,
+      content: template?.content ?? current.content,
+      personalized: templateName === "birthday_wish" ? true : current.personalized,
+    }))
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{message ? "Edit Message" : "Send Message"}</DialogTitle>
+          <DialogTitle>Send SMS</DialogTitle>
           <DialogDescription>
-            {message ? "Update message details" : "Send email or SMS to members and external contacts"}
-            {event && <span className="block mt-1 text-primary">Event: {event.title}</span>}
+            Send SMS to selected members, ministries, departments, committees, all members, or birthday celebrants.
+            {event && <span className="mt-1 block text-primary">Event: {event.title}</span>}
           </DialogDescription>
         </DialogHeader>
 
@@ -128,69 +242,57 @@ export function MessageModal({ isOpen, onClose, message, event }: MessageModalPr
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="compose">Compose</TabsTrigger>
               <TabsTrigger value="recipients">Recipients</TabsTrigger>
-              <TabsTrigger value="schedule">Schedule</TabsTrigger>
+              <TabsTrigger value="options">Options</TabsTrigger>
             </TabsList>
 
-            <div className="min-h-[400px] mt-4">
+            <div className="mt-4 min-h-[420px]">
               <TabsContent value="compose" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Message Type</Label>
-                    <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="sms">SMS</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="priority">Priority</Label>
-                    <Select
-                      value={formData.priority}
-                      onValueChange={(value) => setFormData({ ...formData, priority: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="normal">Normal</SelectItem>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="urgent">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="subject">Label</Label>
+                  <Input
+                    id="subject"
+                    value={formData.subject}
+                    onChange={(e) => setFormData((current) => ({ ...current, subject: e.target.value }))}
+                    placeholder="Internal label for this SMS"
+                  />
                 </div>
 
-                {formData.type === "email" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="subject">Subject</Label>
-                    <Input
-                      id="subject"
-                      value={formData.subject}
-                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                      placeholder="Message subject"
-                      required
-                    />
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="template">Template</Label>
+                  <Select value={formData.templateName || "__none__"} onValueChange={(value) => applyTemplate(value === "__none__" ? "" : value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No template</SelectItem>
+                      {templates.map((template) => (
+                        <SelectItem key={template.name} value={template.name}>
+                          {template.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedTemplate && (
+                    <p className="text-xs text-muted-foreground">
+                      Use <code>{"{{name}}"}</code> to personalize each SMS.
+                    </p>
+                  )}
+                </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="content">Message Content</Label>
+                  <Label htmlFor="content">SMS Content</Label>
                   <Textarea
                     id="content"
                     value={formData.content}
-                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                    placeholder="Type your message here..."
-                    rows={formData.type === "sms" ? 4 : 8}
+                    onChange={(e) => setFormData((current) => ({ ...current, content: e.target.value }))}
+                    placeholder="Type your SMS here..."
+                    rows={6}
                     required
                   />
-                  {formData.type === "sms" && (
-                    <p className="text-xs text-muted-foreground">Character count: {formData.content.length}/160</p>
-                  )}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Character count: {formData.content.length}/1000</span>
+                    <span>{recipientCount} targeted recipients</span>
+                  </div>
                 </div>
               </TabsContent>
 
@@ -199,186 +301,212 @@ export function MessageModal({ isOpen, onClose, message, event }: MessageModalPr
                   <Label>Recipient Type</Label>
                   <Select
                     value={formData.recipientType}
-                    onValueChange={(value) => setFormData({ ...formData, recipientType: value })}
+                    onValueChange={(value) =>
+                      setFormData((current) => ({
+                        ...current,
+                        recipientType: value as CommunicationMessagePayload["recipient_scope"],
+                      }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="group">Groups</SelectItem>
-                      <SelectItem value="individual">Individual Members</SelectItem>
-                      <SelectItem value="external">External Contacts</SelectItem>
+                      <SelectItem value="groups">Ministries, Departments & Committees</SelectItem>
+                      <SelectItem value="members">Individual Members</SelectItem>
+                      <SelectItem value="all_members">All Members</SelectItem>
+                      <SelectItem value="birthday_celebrants">Birthday Celebrants</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {formData.recipientType === "group" && (
+                {formData.recipientType === "groups" && (
                   <div className="space-y-3">
                     <Label>Select Groups</Label>
-                    <div className="space-y-2">
-                      {availableGroups.map((group) => (
-                        <div key={group.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={group.id}
-                            checked={formData.selectedGroups.includes(group.id)}
-                            onCheckedChange={() => handleGroupToggle(group.id)}
-                          />
-                          <label
-                            htmlFor={group.id}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4" />
-                              {group.name}
-                            </div>
-                          </label>
-                        </div>
-                      ))}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        value={groupSearch}
+                        onChange={(e) => setGroupSearch(e.target.value)}
+                        placeholder="Search ministries, departments, committees..."
+                        className="pl-9"
+                      />
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.selectedGroups.map((groupId) => {
-                        const group = availableGroups.find((g) => g.id === groupId)
-                        return (
-                          <Badge key={groupId} variant="secondary" className="flex items-center gap-1">
-                            {group?.name}
-                            <X className="h-3 w-3 cursor-pointer" onClick={() => handleGroupToggle(groupId)} />
-                          </Badge>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {formData.recipientType === "individual" && (
-                  <div className="space-y-3">
-                    <Label>Select Members</Label>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {availableMembers.map((member) => (
-                        <div key={member.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={member.id}
-                            checked={formData.selectedMembers.includes(member.id)}
-                            onCheckedChange={() => handleMemberToggle(member.id)}
-                          />
-                          <label
-                            htmlFor={member.id}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4" />
-                              <div>
-                                <div>{member.name}</div>
-                                <div className="text-xs text-muted-foreground">{member.email}</div>
+                    <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-3">
+                      {filteredGroups.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No matching groups found.</p>
+                      ) : (
+                        filteredGroups.map((group) => (
+                          <label key={group.id} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                            <Checkbox
+                              checked={formData.selectedGroups.includes(group.id)}
+                              onCheckedChange={() => handleGroupToggle(group.id)}
+                            />
+                            <div className="space-y-1 text-sm">
+                              <div className="font-medium">{group.name}</div>
+                              <div className="text-muted-foreground">
+                                {group.type} • {group.memberCount} members
                               </div>
                             </div>
                           </label>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.selectedMembers.map((memberId) => {
-                        const member = availableMembers.find((m) => m.id === memberId)
-                        return (
-                          <Badge key={memberId} variant="secondary" className="flex items-center gap-1">
-                            {member?.name}
-                            <X className="h-3 w-3 cursor-pointer" onClick={() => handleMemberToggle(memberId)} />
-                          </Badge>
-                        )
-                      })}
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
 
-                {formData.recipientType === "external" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="externalContacts">External Contacts</Label>
-                    <Textarea
-                      id="externalContacts"
-                      value={formData.externalContacts}
-                      onChange={(e) => setFormData({ ...formData, externalContacts: e.target.value })}
-                      placeholder="Enter email addresses or phone numbers, separated by commas"
-                      rows={4}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      For emails: john@example.com, jane@example.com
-                      <br />
-                      For SMS: +1234567890, +0987654321
-                    </p>
+                {formData.recipientType === "members" && (
+                  <div className="space-y-3">
+                    <Label>Select Members</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        value={memberSearch}
+                        onChange={(e) => setMemberSearch(e.target.value)}
+                        placeholder="Search members by name or phone..."
+                        className="pl-9"
+                      />
+                    </div>
+                    <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-3">
+                      {filteredMembers.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No matching members found.</p>
+                      ) : (
+                        filteredMembers.map((member) => (
+                          <label key={member.id} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                            <Checkbox
+                              checked={formData.selectedMembers.includes(member.id)}
+                              onCheckedChange={() => handleMemberToggle(member.id)}
+                            />
+                            <div className="space-y-1 text-sm">
+                              <div className="font-medium">{member.name}</div>
+                              <div className="text-muted-foreground">{member.phone}</div>
+                            </div>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {formData.recipientType === "all_members" && (
+                  <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+                    This SMS will go to all members with phone numbers on file.
+                  </div>
+                )}
+
+                {formData.recipientType === "birthday_celebrants" && (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label>Birthday Week</Label>
+                      <Select
+                        value={formData.birthdayWeekOffset}
+                        onValueChange={(value) => setFormData((current) => ({ ...current, birthdayWeekOffset: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="-1">Previous Week</SelectItem>
+                          <SelectItem value="0">Current Week</SelectItem>
+                          <SelectItem value="1">Next Week</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      {isLoadingRecipients ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading celebrants...
+                        </div>
+                      ) : availableRecipients.birthdayCelebrants.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No birthday celebrants found for this week.</p>
+                      ) : (
+                        <div className="max-h-56 space-y-2 overflow-y-auto">
+                          {availableRecipients.birthdayCelebrants.map((member) => (
+                            <div key={member.id} className="flex items-center justify-between rounded-md border p-3 text-sm">
+                              <div className="flex items-center gap-2">
+                                <Cake className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <div className="font-medium">{member.name}</div>
+                                  <div className="text-muted-foreground">{member.phone}</div>
+                                </div>
+                              </div>
+                              <div className="text-right text-muted-foreground">
+                                <div>{member.birthdayDay}</div>
+                                <div>{member.birthdayDate}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {formData.recipientType === "groups" && formData.selectedGroups.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.selectedGroups.map((groupId) => {
+                      const group = availableRecipients.groups.find((item) => item.id === groupId)
+
+                      return (
+                        <Badge key={groupId} variant="secondary" className="flex items-center gap-1">
+                          {group?.name ?? "Selected group"}
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => handleGroupToggle(groupId)} />
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {formData.recipientType === "members" && formData.selectedMembers.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.selectedMembers.map((memberId) => {
+                      const member = availableRecipients.members.find((item) => item.id === memberId)
+
+                      return (
+                        <Badge key={memberId} variant="secondary" className="flex items-center gap-1">
+                          {member?.name ?? "Selected member"}
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => handleMemberToggle(memberId)} />
+                        </Badge>
+                      )
+                    })}
                   </div>
                 )}
               </TabsContent>
 
-              <TabsContent value="schedule" className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Send Options</Label>
-                  <Select
-                    value={formData.scheduledDate ? "later" : "now"}
-                    onValueChange={(value) => {
-                      if (value === "now") {
-                        setFormData({ ...formData, scheduledDate: "", scheduledTime: "" })
-                      } else {
-                        setFormData({ ...formData, scheduledDate: new Date().toISOString().split("T")[0] })
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="now">Send Now</SelectItem>
-                      <SelectItem value="later">Send Later</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <TabsContent value="options" className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="includeGuests"
+                    checked={formData.includeGuests}
+                    onCheckedChange={(checked) => setFormData((current) => ({ ...current, includeGuests: Boolean(checked) }))}
+                  />
+                  <Label htmlFor="includeGuests">Include guests and visitors where applicable</Label>
                 </div>
 
-                {formData.scheduledDate && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="scheduledDate">Scheduled Date</Label>
-                      <Input
-                        id="scheduledDate"
-                        type="date"
-                        value={formData.scheduledDate}
-                        onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="scheduledTime">Scheduled Time</Label>
-                      <Input
-                        id="scheduledTime"
-                        type="time"
-                        value={formData.scheduledTime}
-                        onChange={(e) => setFormData({ ...formData, scheduledTime: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="personalized"
+                    checked={formData.personalized}
+                    onCheckedChange={(checked) => setFormData((current) => ({ ...current, personalized: Boolean(checked) }))}
+                  />
+                  <Label htmlFor="personalized">
+                    Personalize the message with <code>{"{{name}}"}</code>
+                  </Label>
+                </div>
 
-                <div className="p-4 bg-muted rounded-lg">
-                  <h4 className="font-medium mb-2">Message Summary</h4>
-                  <div className="space-y-1 text-sm">
-                    <div>
-                      <span className="font-medium">Type:</span> {formData.type.toUpperCase()}
-                    </div>
-                    <div>
-                      <span className="font-medium">Recipients:</span>{" "}
-                      {formData.recipientType === "group"
-                        ? `${formData.selectedGroups.length} groups selected`
-                        : formData.recipientType === "individual"
-                          ? `${formData.selectedMembers.length} members selected`
-                          : "External contacts"}
-                    </div>
-                    <div>
-                      <span className="font-medium">Priority:</span> {formData.priority}
-                    </div>
-                    {formData.scheduledDate && (
-                      <div>
-                        <span className="font-medium">Scheduled:</span> {formData.scheduledDate} at{" "}
-                        {formData.scheduledTime}
-                      </div>
-                    )}
+                <div className="space-y-2 rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    SMS only
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Groups cover ministries, departments, and committees
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Birthday messages can use one template and still address each celebrant by name
                   </div>
                 </div>
               </TabsContent>
@@ -389,8 +517,8 @@ export function MessageModal({ isOpen, onClose, message, event }: MessageModalPr
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">
-              {message ? "Update Message" : formData.scheduledDate ? "Schedule Message" : "Send Message"}
+            <Button type="submit" disabled={isSaving || isLoadingRecipients || !canSend}>
+              {isSaving ? "Sending..." : "Send SMS"}
             </Button>
           </DialogFooter>
         </form>
