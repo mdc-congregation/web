@@ -1,10 +1,12 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Users, Calendar, DollarSign, MessageSquare, UserCheck, Settings, Church, Home, LogOut } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
+import { api } from "@/utils/api-client"
 
 import {
   Sidebar,
@@ -50,6 +52,34 @@ const navigationItems = [
 export function AppSidebar() {
   const pathname = usePathname()
   const { logout, isLoading } = useAuth()
+  const [branding, setBranding] = useState<{ church_name: string; logo_url?: string | null } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadBranding = async () => {
+      const response = await (api.settings.getChurch() as Promise<{ data: { church_name: string; logo_url?: string | null } }>)
+      if (!cancelled) {
+        setBranding(response.data)
+      }
+    }
+
+    void loadBranding().catch(() => {})
+
+    const handleBrandingUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ church_name: string; logo_url?: string | null }>).detail
+      if (detail) {
+        setBranding(detail)
+      }
+    }
+
+    window.addEventListener("church-settings-updated", handleBrandingUpdate)
+
+    return () => {
+      cancelled = true
+      window.removeEventListener("church-settings-updated", handleBrandingUpdate)
+    }
+  }, [])
 
   const handleLogout = async () => {
     await logout()
@@ -62,11 +92,15 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Church className="size-4" />
-                </div>
+                {branding?.logo_url ? (
+                  <img src={branding.logo_url} alt={branding.church_name} className="size-8 rounded-lg object-cover" />
+                ) : (
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <Church className="size-4" />
+                  </div>
+                )}
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">Freedom Temple</span>
+                  <span className="font-semibold">{branding?.church_name ?? "Freedom Temple"}</span>
                   <span className="text-xs">Management System</span>
                 </div>
               </Link>
