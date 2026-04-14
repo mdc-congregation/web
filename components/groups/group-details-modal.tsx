@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Calendar, Clock, MapPin, Trash2, UserPlus, Users } from "lucide-react"
+import { Calendar, Check, ChevronsUpDown, Clock, MapPin, Trash2, UserPlus, Users } from "lucide-react"
 
 interface GroupDetailsModalProps {
   isOpen: boolean
@@ -73,6 +75,7 @@ export function GroupDetailsModal({
   const [memberRole, setMemberRole] = useState<"leader" | "member" | "observer">("member")
   const [joinedDate, setJoinedDate] = useState("")
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [memberPickerOpen, setMemberPickerOpen] = useState(false)
 
   useEffect(() => {
     setLiveGroup(group ?? null)
@@ -93,6 +96,11 @@ export function GroupDetailsModal({
     return memberOptions.filter((member) => !assignedIds.has(member.id))
   }, [liveGroup?.members, memberOptions])
 
+  const selectedMember = useMemo(
+    () => availableMembers.find((member) => member.id === memberId) ?? null,
+    [availableMembers, memberId],
+  )
+
   const handleAddMember = async () => {
     if (!liveGroup || !memberId || !joinedDate) {
       return
@@ -107,6 +115,7 @@ export function GroupDetailsModal({
       })
       setLiveGroup(response.group)
       setMemberId("")
+      setMemberPickerOpen(false)
       setMemberRole("member")
       setJoinedDate("")
       toast({
@@ -259,19 +268,47 @@ export function GroupDetailsModal({
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label>Member</Label>
-                    <Select value={memberId || "__none__"} onValueChange={(value) => setMemberId(value === "__none__" ? "" : value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select member" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Select member</SelectItem>
-                        {availableMembers.map((member) => (
-                          <SelectItem key={member.id} value={member.id}>
-                            {member.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={memberPickerOpen} onOpenChange={setMemberPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={memberPickerOpen}
+                          className="w-full justify-between font-normal"
+                        >
+                          <span className="truncate">
+                            {selectedMember ? `${selectedMember.name}${selectedMember.phone ? ` • ${selectedMember.phone}` : ""}` : "Search and select member"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search members..." />
+                          <CommandList>
+                            <CommandEmpty>No available members found.</CommandEmpty>
+                            <CommandGroup>
+                              {availableMembers.map((member) => (
+                                <CommandItem
+                                  key={member.id}
+                                  value={`${member.name} ${member.phone ?? ""}`}
+                                  onSelect={() => {
+                                    setMemberId(member.id)
+                                    setMemberPickerOpen(false)
+                                  }}
+                                >
+                                  <Check className={`mr-2 h-4 w-4 ${memberId === member.id ? "opacity-100" : "opacity-0"}`} />
+                                  <div className="flex min-w-0 flex-col">
+                                    <span className="truncate">{member.name}</span>
+                                    {member.phone && <span className="text-xs text-muted-foreground">{member.phone}</span>}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
