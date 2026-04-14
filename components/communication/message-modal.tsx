@@ -379,7 +379,7 @@ export function MessageModal({
                             />
                             <div className="space-y-1 text-sm">
                               <div className="font-medium">{member.name}</div>
-                              <div className="text-muted-foreground">{member.phone}</div>
+                              <div className="text-muted-foreground">{member.phone || "No phone number on file"}</div>
                             </div>
                           </label>
                         ))

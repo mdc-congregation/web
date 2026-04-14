@@ -97,7 +97,7 @@ type RecipientPayload = {
   birthday_celebrants: Array<{
     id: string
     name: string
-    phone: string
+    phone?: string | null
     birthday_date: string
     birthday_day: string
   }>
@@ -210,7 +210,7 @@ export type CommunicationEventDetails = CommunicationEvent & {
 export type CommunicationRecipientOptions = {
   members: Array<{ id: string; name: string; phone: string; status?: string | null; accountType?: string | null }>
   groups: Array<{ id: string; name: string; type: string; memberCount: number }>
-  birthdayCelebrants: Array<{ id: string; name: string; phone: string; birthdayDate: string; birthdayDay: string }>
+  birthdayCelebrants: Array<{ id: string; name: string; phone?: string | null; birthdayDate: string; birthdayDay: string }>
 }
 
 export type CommunicationTemplate = {
@@ -290,7 +290,7 @@ const normalizeRecipients = (payload: RecipientPayload): CommunicationRecipientO
   birthdayCelebrants: payload.birthday_celebrants.map((member) => ({
     id: member.id,
     name: member.name,
-    phone: member.phone,
+    phone: member.phone ?? null,
     birthdayDate: formatShortDate(member.birthday_date),
     birthdayDay: member.birthday_day,
   })),
