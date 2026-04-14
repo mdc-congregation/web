@@ -243,6 +243,20 @@ export const api = {
     getTemplates: () => apiClient.get("/communication/templates"),
   },
 
+  settings: {
+    getChurch: () => apiClient.get("/settings/church"),
+    updateChurch: (data: any) => apiClient.put("/settings/church", data),
+    getUsers: () => apiClient.get("/settings/users"),
+    createUser: (data: any) => apiClient.post("/settings/users", data),
+    updateUser: (id: string, data: any) => apiClient.put(`/settings/users/${id}`, data),
+    updateUserPassword: (id: string, data: any) => apiClient.put(`/settings/users/${id}/password`, data),
+    changePassword: (data: any) => apiClient.put("/settings/change-password", data),
+    getRoles: () => apiClient.get("/settings/roles"),
+    createRole: (data: any) => apiClient.post("/settings/roles", data),
+    updateRole: (id: string, data: any) => apiClient.put(`/settings/roles/${id}`, data),
+    getPermissions: () => apiClient.get("/settings/permissions"),
+  },
+
   uploads: {
     file: (file: File, fields?: Record<string, string>) => apiClient.upload("/file-upload", file, fields),
   },
