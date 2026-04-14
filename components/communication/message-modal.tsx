@@ -167,7 +167,7 @@ export function MessageModal({
       case "all_members":
         return availableRecipients.members.length
       case "birthday_celebrants":
-        return availableRecipients.birthdayCelebrants.length
+        return formData.selectedMembers.length > 0 ? formData.selectedMembers.length : availableRecipients.birthdayCelebrants.length
       default:
         return 0
     }
@@ -190,7 +190,10 @@ export function MessageModal({
       subject: formData.subject.trim() || undefined,
       content: formData.content.trim(),
       recipient_scope: formData.recipientType,
-      member_ids: formData.recipientType === "members" ? formData.selectedMembers : undefined,
+      member_ids:
+        formData.recipientType === "members" || (formData.recipientType === "birthday_celebrants" && formData.selectedMembers.length > 0)
+          ? formData.selectedMembers
+          : undefined,
       group_ids: formData.recipientType === "groups" ? formData.selectedGroups : undefined,
       include_guests: formData.includeGuests,
       personalized: formData.personalized,
@@ -213,6 +216,20 @@ export function MessageModal({
       selectedMembers: current.selectedMembers.includes(memberId)
         ? current.selectedMembers.filter((id) => id !== memberId)
         : [...current.selectedMembers, memberId],
+    }))
+  }
+
+  const handleSelectAllCelebrants = () => {
+    setFormData((current) => ({
+      ...current,
+      selectedMembers: availableRecipients.birthdayCelebrants.map((member) => member.id),
+    }))
+  }
+
+  const handleClearSelectedCelebrants = () => {
+    setFormData((current) => ({
+      ...current,
+      selectedMembers: [],
     }))
   }
 
@@ -414,7 +431,18 @@ export function MessageModal({
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {availableRecipients.birthdayCelebrants.length} celebrants available for this week
+                      {formData.selectedMembers.length > 0 ? ` • ${formData.selectedMembers.length} selected` : " • all will be sent if none are selected"}
                     </div>
+                    {availableRecipients.birthdayCelebrants.length > 0 && (
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={handleSelectAllCelebrants}>
+                          Select all
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={handleClearSelectedCelebrants}>
+                          Clear selection
+                        </Button>
+                      </div>
+                    )}
                     <div className="rounded-lg border p-3">
                       {isLoadingRecipients ? (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -429,19 +457,23 @@ export function MessageModal({
                       ) : (
                         <div className="max-h-56 space-y-2 overflow-y-auto">
                           {availableRecipients.birthdayCelebrants.map((member) => (
-                            <div key={member.id} className="flex items-center justify-between rounded-md border p-3 text-sm">
-                              <div className="flex items-center gap-2">
+                            <label key={member.id} className="flex cursor-pointer items-center justify-between rounded-md border p-3 text-sm">
+                              <div className="flex items-center gap-3">
+                                <Checkbox
+                                  checked={formData.selectedMembers.includes(member.id)}
+                                  onCheckedChange={() => handleMemberToggle(member.id)}
+                                />
                                 <Cake className="h-4 w-4 text-muted-foreground" />
                                 <div>
                                   <div className="font-medium">{member.name}</div>
-                                  <div className="text-muted-foreground">{member.phone}</div>
+                                  <div className="text-muted-foreground">{member.phone || "No phone number on file"}</div>
                                 </div>
                               </div>
                               <div className="text-right text-muted-foreground">
                                 <div>{member.birthdayDay}</div>
                                 <div>{member.birthdayDate}</div>
                               </div>
-                            </div>
+                            </label>
                           ))}
                         </div>
                       )}
@@ -472,6 +504,21 @@ export function MessageModal({
                       return (
                         <Badge key={memberId} variant="secondary" className="flex items-center gap-1">
                           {member?.name ?? "Selected member"}
+                          <X className="h-3 w-3 cursor-pointer" onClick={() => handleMemberToggle(memberId)} />
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {formData.recipientType === "birthday_celebrants" && formData.selectedMembers.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.selectedMembers.map((memberId) => {
+                      const member = availableRecipients.birthdayCelebrants.find((item) => item.id === memberId)
+
+                      return (
+                        <Badge key={memberId} variant="secondary" className="flex items-center gap-1">
+                          {member?.name ?? "Selected celebrant"}
                           <X className="h-3 w-3 cursor-pointer" onClick={() => handleMemberToggle(memberId)} />
                         </Badge>
                       )
