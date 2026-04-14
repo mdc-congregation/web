@@ -412,6 +412,9 @@ export function MessageModal({
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className="text-xs text-muted-foreground">
+                      {availableRecipients.birthdayCelebrants.length} celebrants available for this week
+                    </div>
                     <div className="rounded-lg border p-3">
                       {isLoadingRecipients ? (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -419,7 +422,10 @@ export function MessageModal({
                           Loading celebrants...
                         </div>
                       ) : availableRecipients.birthdayCelebrants.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No birthday celebrants found for this week.</p>
+                        <div className="space-y-1 text-sm text-muted-foreground">
+                          <p>No birthday celebrants found for this week.</p>
+                          {!formData.includeGuests && <p>Try enabling guests in Options if celebrants include visitors or guests.</p>}
+                        </div>
                       ) : (
                         <div className="max-h-56 space-y-2 overflow-y-auto">
                           {availableRecipients.birthdayCelebrants.map((member) => (
